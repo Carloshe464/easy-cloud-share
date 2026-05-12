@@ -42,28 +42,34 @@ function AppPage() {
     });
   }, [navigate]);
 
+  const userId = user?.id;
+  const folderId = currentFolder?.id ?? null;
+
   const refresh = useCallback(async () => {
-    if (!user) return;
+    if (!userId) return;
     setLoading(true);
-    let foldersQ = supabase.from("folders").select("*").eq("user_id", user.id);
-    let filesQ = supabase.from("files").select("*").eq("user_id", user.id);
-    if (currentFolder) {
-      foldersQ = foldersQ.eq("parent_id", currentFolder.id);
-      filesQ = filesQ.eq("folder_id", currentFolder.id);
+    let foldersQ = supabase.from("folders").select("*").eq("user_id", userId);
+    let filesQ = supabase.from("files").select("*").eq("user_id", userId);
+    if (folderId) {
+      foldersQ = foldersQ.eq("parent_id", folderId);
+      filesQ = filesQ.eq("folder_id", folderId);
     } else {
       foldersQ = foldersQ.is("parent_id", null);
       filesQ = filesQ.is("folder_id", null);
     }
     const [{ data: f }, { data: fi }, u] = await Promise.all([
-      foldersQ, filesQ, fetchUser(user.id),
+      foldersQ, filesQ, fetchUser(userId),
     ]);
     setFolders((f as FolderRow[]) ?? []);
     setFiles((fi as FileRow[]) ?? []);
-    if (u) setUser(u);
+    if (u) setUser((prev) =>
+      prev && prev.used_bytes === u.used_bytes && prev.quota_bytes === u.quota_bytes
+        ? prev : u
+    );
     setLoading(false);
-  }, [user, currentFolder]);
+  }, [userId, folderId]);
 
-  useEffect(() => { if (user) refresh(); }, [user, currentFolder, refresh]);
+  useEffect(() => { refresh(); }, [refresh]);
 
   const handleLogout = () => { clearStoredUser(); navigate({ to: "/" }); };
 
