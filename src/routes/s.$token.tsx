@@ -6,7 +6,7 @@ import { formatBytes, publicUrl } from "@/lib/cloud";
 
 export const Route = createFileRoute("/s/$token")({
   component: SharePage,
-  head: ({ params }) => ({
+  head: () => ({
     meta: [
       { title: `Arquivo compartilhado — Nuvem Pública` },
       { name: "description", content: `Baixe este arquivo compartilhado publicamente.` },

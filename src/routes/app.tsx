@@ -45,21 +45,20 @@ function AppPage() {
   const refresh = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const [{ data: f }, { data: fi }, u] = await Promise.all([
-      supabase.from("folders").select("*").eq("user_id", user.id).eq("parent_id", currentFolder?.id ?? null as any),
-      supabase.from("files").select("*").eq("user_id", user.id).eq("folder_id", currentFolder?.id ?? null as any),
-      fetchUser(user.id),
-    ]);
-    // null filter quirk: .eq with null doesn't work; use is()
-    if (currentFolder === null) {
-      const { data: f2 } = await supabase.from("folders").select("*").eq("user_id", user.id).is("parent_id", null);
-      const { data: fi2 } = await supabase.from("files").select("*").eq("user_id", user.id).is("folder_id", null);
-      setFolders(f2 ?? []);
-      setFiles(fi2 ?? []);
+    let foldersQ = supabase.from("folders").select("*").eq("user_id", user.id);
+    let filesQ = supabase.from("files").select("*").eq("user_id", user.id);
+    if (currentFolder) {
+      foldersQ = foldersQ.eq("parent_id", currentFolder.id);
+      filesQ = filesQ.eq("folder_id", currentFolder.id);
     } else {
-      setFolders(f ?? []);
-      setFiles(fi ?? []);
+      foldersQ = foldersQ.is("parent_id", null);
+      filesQ = filesQ.is("folder_id", null);
     }
+    const [{ data: f }, { data: fi }, u] = await Promise.all([
+      foldersQ, filesQ, fetchUser(user.id),
+    ]);
+    setFolders((f as FolderRow[]) ?? []);
+    setFiles((fi as FileRow[]) ?? []);
     if (u) setUser(u);
     setLoading(false);
   }, [user, currentFolder]);
