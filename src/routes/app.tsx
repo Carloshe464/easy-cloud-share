@@ -1,8 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import {
-  Cloud, Upload, Folder, FolderPlus, FileIcon, Download, Trash2, Pencil,
-  Share2, LogOut, ChevronRight, Loader2, Home, Eye, X,
+  Cloud, Upload, FolderPlus, LogOut, ChevronRight, Loader2, Home,
+  CheckSquare, Square,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -10,17 +10,22 @@ import {
   formatBytes, publicUrl, type CloudUser,
 } from "@/lib/cloud";
 import { toast } from "sonner";
+import { FileItem } from "@/components/cloud/FileItem";
+import { FolderItem } from "@/components/cloud/FolderItem";
+import { Toolbar } from "@/components/cloud/Toolbar";
+import { PreviewCard } from "@/components/cloud/PreviewCard";
+import { DragLayer } from "@/components/cloud/DragLayer";
+import { useSelection } from "@/components/cloud/SelectionManager";
+import {
+  key as makeKey, type FileRow, type FolderRow, type SelectionKey,
+} from "@/components/cloud/types";
 
 export const Route = createFileRoute("/app")({
   component: AppPage,
   head: () => ({ meta: [{ title: "Minha Nuvem" }] }),
 });
 
-type FolderRow = { id: string; name: string; parent_id: string | null };
-type FileRow = {
-  id: string; name: string; storage_path: string; size_bytes: number;
-  mime_type: string | null; share_token: string; folder_id: string | null;
-};
+const INTERNAL_MIME = "application/x-cloud-items";
 
 function AppPage() {
   const navigate = useNavigate();
@@ -32,29 +37,27 @@ function AppPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<FileRow | null>(null);
+  const [dropTarget, setDropTarget] = useState<string | null>(null); // folder id
+  const [externalDrag, setExternalDrag] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const refreshRunRef = useRef(0);
 
+  const sel = useSelection();
+
+  // ---------- bootstrap ----------
   useEffect(() => {
     let active = true;
-
     const boot = async () => {
       const id = getStoredUserId();
-      if (!id) {
-        navigate({ to: "/" });
-        return;
-      }
-
+      if (!id) { navigate({ to: "/" }); return; }
       const u = await fetchUser(id);
       if (!active) return;
-      if (!u) {
-        clearStoredUser();
-        navigate({ to: "/" });
-        return;
-      }
-      setUser((prev) => (prev?.id === u.id && prev.used_bytes === u.used_bytes && prev.quota_bytes === u.quota_bytes ? prev : u));
+      if (!u) { clearStoredUser(); navigate({ to: "/" }); return; }
+      setUser((prev) =>
+        prev?.id === u.id && prev.used_bytes === u.used_bytes && prev.quota_bytes === u.quota_bytes
+          ? prev : u
+      );
     };
-
     boot();
     return () => { active = false; };
   }, [navigate]);
@@ -77,7 +80,7 @@ function AppPage() {
         filesQ = filesQ.is("folder_id", null);
       }
       const [{ data: f }, { data: fi }, u] = await Promise.all([
-        foldersQ, filesQ, fetchUser(userId),
+        foldersQ.order("name"), filesQ.order("name"), fetchUser(userId),
       ]);
       if (runId !== refreshRunRef.current) return;
       setFolders((f as FolderRow[]) ?? []);
@@ -93,6 +96,28 @@ function AppPage() {
 
   useEffect(() => { refresh(); }, [refresh]);
 
+  // clear selection when navigating folders
+  useEffect(() => { sel.clear(); }, [folderId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ---------- keys & ordered selection list ----------
+  const orderedKeys = useMemo<SelectionKey[]>(
+    () => [
+      ...folders.map((f) => makeKey("folder", f.id)),
+      ...files.map((f) => makeKey("file", f.id)),
+    ],
+    [folders, files]
+  );
+
+  const selectedFiles = useMemo(
+    () => files.filter((f) => sel.isSelected(makeKey("file", f.id))),
+    [files, sel]
+  );
+  const selectedFolders = useMemo(
+    () => folders.filter((f) => sel.isSelected(makeKey("folder", f.id))),
+    [folders, sel]
+  );
+
+  // ---------- handlers ----------
   const handleLogout = () => { clearStoredUser(); navigate({ to: "/" }); };
 
   const enterFolder = (f: FolderRow) => {
@@ -113,20 +138,20 @@ function AppPage() {
     const { error } = await supabase.from("folders").insert({
       user_id: user.id, parent_id: currentFolder?.id ?? null, name: name.trim(),
     });
-    if (error) toast.error(error.message); else { toast.success("Pasta criada"); refresh(); }
+    if (error) toast.error(error.message);
+    else { toast.success("Pasta criada"); refresh(); }
   };
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!user || !e.target.files) return;
-    const filesToUpload = Array.from(e.target.files);
-    e.target.value = "";
-    const total = filesToUpload.reduce((s, f) => s + f.size, 0);
+  const uploadFiles = useCallback(async (list: File[]) => {
+    if (!user || list.length === 0) return;
+    const total = list.reduce((s, f) => s + f.size, 0);
     if (user.used_bytes + total > user.quota_bytes) {
       toast.error("Cota de 4 TB excedida"); return;
     }
     setUploading(true);
+    const tId = toast.loading(`Enviando ${list.length} arquivo(s)...`);
     try {
-      for (const file of filesToUpload) {
+      for (const file of list) {
         const path = `${user.id}/${crypto.randomUUID()}-${file.name}`;
         const { error: upErr } = await supabase.storage.from("cloud-files").upload(path, file, {
           contentType: file.type || "application/octet-stream",
@@ -139,64 +164,265 @@ function AppPage() {
         });
         if (dbErr) toast.error(`${file.name}: ${dbErr.message}`);
       }
-      toast.success("Upload concluído");
+      toast.success("Upload concluído", { id: tId });
       refresh();
     } finally { setUploading(false); }
+  }, [user, currentFolder, refresh]);
+
+  const handleUploadInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const list = Array.from(e.target.files);
+    e.target.value = "";
+    await uploadFiles(list);
   };
 
-  const deleteFile = async (f: FileRow) => {
-    if (!confirm(`Excluir "${f.name}"?`)) return;
-    await supabase.storage.from("cloud-files").remove([f.storage_path]);
-    const { error } = await supabase.from("files").delete().eq("id", f.id);
-    if (error) toast.error(error.message); else { toast.success("Arquivo excluído"); refresh(); }
-  };
-
-  const deleteFolder = async (f: FolderRow) => {
-    if (!confirm(`Excluir pasta "${f.name}" e todo o conteúdo?`)) return;
-    // remove storage objects under user's folder children recursively (best-effort: children files cascade DB)
-    // fetch child files to remove from storage
-    const { data: childFiles } = await supabase.from("files").select("storage_path").eq("folder_id", f.id);
-    if (childFiles?.length) {
-      await supabase.storage.from("cloud-files").remove(childFiles.map(c => c.storage_path));
+  // ---------- bulk actions ----------
+  const downloadSelected = () => {
+    if (selectedFiles.length === 0) {
+      toast.message("Selecione arquivos para baixar");
+      return;
     }
-    const { error } = await supabase.from("folders").delete().eq("id", f.id);
-    if (error) toast.error(error.message); else { toast.success("Pasta excluída"); refresh(); }
+    selectedFiles.forEach((f, i) => {
+      setTimeout(() => {
+        const a = document.createElement("a");
+        a.href = publicUrl(f.storage_path);
+        a.download = f.name;
+        a.target = "_blank";
+        document.body.appendChild(a); a.click(); a.remove();
+      }, i * 150);
+    });
   };
 
-  const renameFile = async (f: FileRow) => {
-    const name = window.prompt("Novo nome:", f.name);
-    if (!name?.trim() || name === f.name) return;
-    const { error } = await supabase.from("files").update({ name: name.trim() }).eq("id", f.id);
-    if (error) toast.error(error.message); else { toast.success("Renomeado"); refresh(); }
-  };
-
-  const renameFolder = async (f: FolderRow) => {
-    const name = window.prompt("Novo nome:", f.name);
-    if (!name?.trim() || name === f.name) return;
-    const { error } = await supabase.from("folders").update({ name: name.trim() }).eq("id", f.id);
-    if (error) toast.error(error.message); else { toast.success("Renomeado"); refresh(); }
-  };
-
-  const downloadFile = (f: FileRow) => {
-    const url = publicUrl(f.storage_path);
-    const a = document.createElement("a");
-    a.href = url; a.download = f.name; a.target = "_blank";
-    document.body.appendChild(a); a.click(); a.remove();
-  };
-
-  const previewFile = (f: FileRow) => {
-    setSelectedFile(f);
-  };
-
-  const shareFile = async (f: FileRow) => {
-    const url = `${window.location.origin}/s/${f.share_token}`;
+  const copyShareLinks = async () => {
+    if (selectedFiles.length === 0) return;
+    const urls = selectedFiles.map((f) => `${window.location.origin}/s/${f.share_token}`).join("\n");
     try {
-      await navigator.clipboard.writeText(url);
-      toast.success("Link público copiado!");
+      await navigator.clipboard.writeText(urls);
+      toast.success(`${selectedFiles.length} link(s) copiado(s)!`);
     } catch {
-      window.prompt("Copie o link:", url);
+      window.prompt("Copie os links:", urls);
     }
   };
+
+  const shareSelected = async () => {
+    if (selectedFiles.length === 0) return;
+    const f = selectedFiles[0];
+    const url = `${window.location.origin}/s/${f.share_token}`;
+    const shareData = { title: f.name, text: f.name, url };
+    if (navigator.share) {
+      try { await navigator.share(shareData); return; } catch { /* fall through */ }
+    }
+    await copyShareLinks();
+  };
+
+  const renameSelected = async () => {
+    const total = selectedFiles.length + selectedFolders.length;
+    if (total !== 1) { toast.message("Selecione apenas 1 item para renomear"); return; }
+    if (selectedFiles.length === 1) {
+      const f = selectedFiles[0];
+      const name = window.prompt("Novo nome:", f.name);
+      if (!name?.trim() || name === f.name) return;
+      const { error } = await supabase.from("files").update({ name: name.trim() }).eq("id", f.id);
+      if (error) toast.error(error.message); else { toast.success("Renomeado"); refresh(); }
+    } else {
+      const f = selectedFolders[0];
+      const name = window.prompt("Novo nome:", f.name);
+      if (!name?.trim() || name === f.name) return;
+      const { error } = await supabase.from("folders").update({ name: name.trim() }).eq("id", f.id);
+      if (error) toast.error(error.message); else { toast.success("Renomeado"); refresh(); }
+    }
+  };
+
+  const deleteSelected = async () => {
+    const total = selectedFiles.length + selectedFolders.length;
+    if (total === 0) return;
+    if (!confirm(`Excluir ${total} item(s)?`)) return;
+    const tId = toast.loading("Excluindo...");
+    try {
+      if (selectedFiles.length) {
+        await supabase.storage.from("cloud-files").remove(selectedFiles.map((f) => f.storage_path));
+        await supabase.from("files").delete().in("id", selectedFiles.map((f) => f.id));
+      }
+      for (const fo of selectedFolders) {
+        const { data: childFiles } = await supabase.from("files").select("storage_path").eq("folder_id", fo.id);
+        if (childFiles?.length) {
+          await supabase.storage.from("cloud-files").remove(childFiles.map((c) => c.storage_path));
+        }
+        await supabase.from("folders").delete().eq("id", fo.id);
+      }
+      toast.success("Itens excluídos", { id: tId });
+      sel.clear();
+      refresh();
+    } catch (e) {
+      toast.error((e as Error).message, { id: tId });
+    }
+  };
+
+  // ---------- drag & drop (move) ----------
+  const beginInternalDrag = (e: React.DragEvent, k: SelectionKey) => {
+    // if dragged item not selected, drag just it; else drag whole selection
+    let keys: SelectionKey[];
+    if (sel.isSelected(k)) {
+      keys = Array.from(sel.selected);
+    } else {
+      keys = [k];
+      sel.clear();
+      sel.toggle(k);
+    }
+    e.dataTransfer.setData(INTERNAL_MIME, JSON.stringify(keys));
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const moveItemsToFolder = useCallback(async (keys: SelectionKey[], targetFolderId: string | null) => {
+    const fileIds: string[] = [];
+    const folderIds: string[] = [];
+    for (const k of keys) {
+      const [kind, id] = k.split(":") as [string, string];
+      if (kind === "file") fileIds.push(id);
+      else if (kind === "folder") {
+        if (targetFolderId && id === targetFolderId) {
+          toast.error("Não é possível mover uma pasta para dentro dela mesma");
+          return;
+        }
+        folderIds.push(id);
+      }
+    }
+    const tId = toast.loading("Movendo...");
+    try {
+      if (fileIds.length) {
+        const { error } = await supabase.from("files").update({ folder_id: targetFolderId }).in("id", fileIds);
+        if (error) throw error;
+      }
+      if (folderIds.length) {
+        const { error } = await supabase.from("folders").update({ parent_id: targetFolderId }).in("id", folderIds);
+        if (error) throw error;
+      }
+      toast.success("Itens movidos", { id: tId });
+      sel.clear();
+      refresh();
+    } catch (e) {
+      toast.error((e as Error).message, { id: tId });
+    }
+  }, [refresh, sel]);
+
+  const onFolderDragOver = (e: React.DragEvent, fId: string) => {
+    if (!e.dataTransfer.types.includes(INTERNAL_MIME) && !e.dataTransfer.types.includes("Files")) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = e.dataTransfer.types.includes("Files") ? "copy" : "move";
+    setDropTarget(fId);
+  };
+  const onFolderDragLeave = (_e: React.DragEvent, fId: string) => {
+    setDropTarget((prev) => (prev === fId ? null : prev));
+  };
+  const onFolderDrop = async (e: React.DragEvent, targetFolder: FolderRow) => {
+    e.preventDefault();
+    setDropTarget(null);
+    setExternalDrag(false);
+    const internal = e.dataTransfer.getData(INTERNAL_MIME);
+    if (internal) {
+      const keys = JSON.parse(internal) as SelectionKey[];
+      if (keys.some((k) => k === makeKey("folder", targetFolder.id))) {
+        toast.error("Não é possível mover uma pasta para dentro dela mesma"); return;
+      }
+      await moveItemsToFolder(keys, targetFolder.id);
+      return;
+    }
+    if (e.dataTransfer.files?.length) {
+      // Upload directly into target folder
+      const list = Array.from(e.dataTransfer.files);
+      const prevFolder = currentFolder;
+      // temporarily set folder for upload context
+      const path = `${user!.id}/`;
+      // inline upload to specific folder
+      const total = list.reduce((s, f) => s + f.size, 0);
+      if (user!.used_bytes + total > user!.quota_bytes) {
+        toast.error("Cota de 4 TB excedida"); return;
+      }
+      setUploading(true);
+      const tId = toast.loading(`Enviando ${list.length} arquivo(s)...`);
+      try {
+        for (const file of list) {
+          const sp = `${path}${crypto.randomUUID()}-${file.name}`;
+          const { error: upErr } = await supabase.storage.from("cloud-files").upload(sp, file, {
+            contentType: file.type || "application/octet-stream",
+          });
+          if (upErr) { toast.error(`${file.name}: ${upErr.message}`); continue; }
+          await supabase.from("files").insert({
+            user_id: user!.id, folder_id: targetFolder.id, name: file.name,
+            storage_path: sp, size_bytes: file.size, mime_type: file.type || null,
+          });
+        }
+        toast.success("Upload concluído", { id: tId });
+        if (prevFolder?.id === currentFolder?.id) refresh();
+      } finally { setUploading(false); }
+    }
+  };
+
+  // window-level drop = upload to current folder
+  useEffect(() => {
+    let counter = 0;
+    const onDragEnter = (e: DragEvent) => {
+      if (e.dataTransfer?.types.includes("Files")) {
+        counter++;
+        setExternalDrag(true);
+      }
+    };
+    const onDragLeave = (e: DragEvent) => {
+      if (e.dataTransfer?.types.includes("Files")) {
+        counter = Math.max(0, counter - 1);
+        if (counter === 0) setExternalDrag(false);
+      }
+    };
+    const onDragOver = (e: DragEvent) => {
+      if (e.dataTransfer?.types.includes("Files")) e.preventDefault();
+    };
+    const onDrop = (e: DragEvent) => {
+      counter = 0;
+      setExternalDrag(false);
+      // if dropped on a folder, that handler runs first and stops here; otherwise upload to current
+      if (e.dataTransfer?.files?.length && !dropTarget) {
+        e.preventDefault();
+        uploadFiles(Array.from(e.dataTransfer.files));
+      }
+    };
+    window.addEventListener("dragenter", onDragEnter);
+    window.addEventListener("dragleave", onDragLeave);
+    window.addEventListener("dragover", onDragOver);
+    window.addEventListener("drop", onDrop);
+    return () => {
+      window.removeEventListener("dragenter", onDragEnter);
+      window.removeEventListener("dragleave", onDragLeave);
+      window.removeEventListener("dragover", onDragOver);
+      window.removeEventListener("drop", onDrop);
+    };
+  }, [uploadFiles, dropTarget]);
+
+  // ---------- keyboard shortcuts ----------
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      const tag = t?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || (t && t.isContentEditable)) return;
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
+        e.preventDefault();
+        sel.selectAll(orderedKeys);
+      } else if (e.key === "Delete") {
+        if (sel.count > 0) { e.preventDefault(); deleteSelected(); }
+      } else if (e.key === "F2") {
+        if (sel.count === 1) { e.preventDefault(); renameSelected(); }
+      } else if (e.key === "Escape") {
+        sel.clear();
+      } else if (e.key === "Enter") {
+        if (selectedFiles.length === 1 && selectedFolders.length === 0) {
+          setSelectedFile(selectedFiles[0]);
+        } else if (selectedFolders.length === 1 && selectedFiles.length === 0) {
+          enterFolder(selectedFolders[0]);
+        }
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }); // intentionally no deps — always uses current closure
 
   if (!user) {
     return (
@@ -206,17 +432,22 @@ function AppPage() {
     );
   }
   const usedPct = (user.used_bytes / user.quota_bytes) * 100;
+  const allSelected = orderedKeys.length > 0 && orderedKeys.every((k) => sel.isSelected(k));
 
   return (
-    <main className="min-h-screen">
-      <header className="border-b border-border/50 backdrop-blur-xl bg-background/40 sticky top-0 z-10">
+    <main className="min-h-screen pb-28">
+      <header className="border-b border-border/50 backdrop-blur-xl bg-background/40 sticky top-0 z-20">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-4">
           <Cloud className="w-7 h-7 text-primary" strokeWidth={1.5} />
           <div className="flex-1 min-w-0">
             <div className="font-display font-bold text-lg leading-none">Nuvem Pública</div>
             <div className="text-xs text-muted-foreground truncate">{getStoredPhone()}</div>
           </div>
-          <button onClick={handleLogout} className="text-muted-foreground hover:text-foreground p-2 rounded-lg hover:bg-secondary">
+          <button
+            onClick={handleLogout}
+            aria-label="Sair"
+            className="text-muted-foreground hover:text-foreground p-2 rounded-lg hover:bg-secondary"
+          >
             <LogOut className="w-5 h-5" />
           </button>
         </div>
@@ -228,7 +459,8 @@ function AppPage() {
           <div className="flex items-center justify-between mb-2 text-sm">
             <span className="text-muted-foreground">Espaço utilizado</span>
             <span className="font-medium">
-              {formatBytes(user.used_bytes)} <span className="text-muted-foreground">/ {formatBytes(user.quota_bytes)}</span>
+              {formatBytes(user.used_bytes)}{" "}
+              <span className="text-muted-foreground">/ {formatBytes(user.quota_bytes)}</span>
             </span>
           </div>
           <div className="h-2 rounded-full bg-secondary overflow-hidden">
@@ -247,29 +479,49 @@ function AppPage() {
           {breadcrumbs.map((b, i) => (
             <span key={b.id} className="inline-flex items-center gap-1">
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              <button onClick={() => goToCrumb(i)} className="hover:text-primary truncate max-w-[180px]">{b.name}</button>
+              <button onClick={() => goToCrumb(i)} className="hover:text-primary truncate max-w-[180px]">
+                {b.name}
+              </button>
             </span>
           ))}
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2 mb-6 flex-wrap">
+        <div className="flex gap-2 mb-4 flex-wrap">
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="inline-flex items-center gap-2 bg-primary text-primary-foreground rounded-xl px-4 py-2.5 font-medium hover:opacity-90 disabled:opacity-50"
+            className="inline-flex items-center gap-2 bg-primary text-primary-foreground rounded-xl px-4 py-2.5 font-medium hover:opacity-90 disabled:opacity-50 transition"
           >
             {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
             {uploading ? "Enviando..." : "Enviar arquivos"}
           </button>
           <button
             onClick={createFolder}
-            className="inline-flex items-center gap-2 bg-secondary text-secondary-foreground rounded-xl px-4 py-2.5 font-medium hover:bg-secondary/80"
+            className="inline-flex items-center gap-2 bg-secondary text-secondary-foreground rounded-xl px-4 py-2.5 font-medium hover:bg-secondary/80 transition"
           >
             <FolderPlus className="w-4 h-4" /> Nova pasta
           </button>
-          <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleUpload} />
+          <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleUploadInput} />
         </div>
+
+        {/* Selection bar */}
+        {orderedKeys.length > 0 && (
+          <div className="flex items-center gap-2 mb-4 text-sm">
+            <button
+              onClick={() => (allSelected ? sel.clear() : sel.selectAll(orderedKeys))}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition"
+            >
+              {allSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+              {allSelected ? "Desmarcar tudo" : "Selecionar todos"}
+            </button>
+            {sel.count > 0 && (
+              <span className="text-muted-foreground">
+                · {sel.count} selecionado(s)
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Listing */}
         {loading ? (
@@ -277,115 +529,67 @@ function AppPage() {
             <Loader2 className="w-6 h-6 animate-spin" />
           </div>
         ) : folders.length === 0 && files.length === 0 ? (
-          <div className="text-center py-20 text-muted-foreground">
+          <div
+            className="text-center py-20 text-muted-foreground border-2 border-dashed border-border/60 rounded-2xl"
+            onClick={() => sel.clear()}
+          >
             <Cloud className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p>Nada por aqui ainda. Envie seu primeiro arquivo.</p>
+            <p>Nada por aqui ainda.</p>
+            <p className="text-xs mt-1">Arraste arquivos ou clique em "Enviar arquivos".</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {folders.map((f) => (
-              <div key={f.id} className="group bg-card/60 backdrop-blur rounded-xl p-4 ring-1 ring-border hover:ring-primary/50 transition flex items-center gap-3">
-                <button onClick={() => enterFolder(f)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
-                  <Folder className="w-8 h-8 text-accent shrink-0" strokeWidth={1.5} />
-                  <span className="font-medium truncate">{f.name}</span>
-                </button>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
-                  <IconBtn onClick={() => renameFolder(f)} icon={Pencil} />
-                  <IconBtn onClick={() => deleteFolder(f)} icon={Trash2} danger />
-                </div>
-              </div>
-            ))}
-            {files.map((f) => (
-              <div key={f.id} className="group bg-card/60 backdrop-blur rounded-xl p-4 ring-1 ring-border hover:ring-primary/50 transition">
-                <div className="flex items-center gap-3 mb-3">
-                  <FileIcon className="w-8 h-8 text-primary shrink-0" strokeWidth={1.5} />
-                  <div className="min-w-0 flex-1">
-                    <div className="font-medium truncate">{f.name}</div>
-                    <div className="text-xs text-muted-foreground">{formatBytes(f.size_bytes)}</div>
-                  </div>
-                </div>
-                <div className="flex gap-1 justify-end">
-                  <IconBtn onClick={() => previewFile(f)} icon={Eye} title="Visualizar" />
-                  <IconBtn onClick={() => downloadFile(f)} icon={Download} title="Baixar" />
-                  <IconBtn onClick={() => shareFile(f)} icon={Share2} title="Compartilhar" />
-                  <IconBtn onClick={() => renameFile(f)} icon={Pencil} title="Renomear" />
-                  <IconBtn onClick={() => deleteFile(f)} icon={Trash2} title="Excluir" danger />
-                </div>
-              </div>
-            ))}
+          <div
+            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3"
+            onClick={(e) => { if (e.target === e.currentTarget) sel.clear(); }}
+          >
+            {folders.map((f) => {
+              const k = makeKey("folder", f.id);
+              return (
+                <FolderItem
+                  key={f.id}
+                  folder={f}
+                  selected={sel.isSelected(k)}
+                  dropActive={dropTarget === f.id}
+                  onClick={(e) => sel.handleClick(e, k, orderedKeys)}
+                  onDoubleClick={() => enterFolder(f)}
+                  onDragStart={(e) => beginInternalDrag(e, k)}
+                  onDragOver={(e) => onFolderDragOver(e, f.id)}
+                  onDragLeave={(e) => onFolderDragLeave(e, f.id)}
+                  onDrop={(e) => onFolderDrop(e, f)}
+                />
+              );
+            })}
+            {files.map((f) => {
+              const k = makeKey("file", f.id);
+              return (
+                <FileItem
+                  key={f.id}
+                  file={f}
+                  selected={sel.isSelected(k)}
+                  onClick={(e) => sel.handleClick(e, k, orderedKeys)}
+                  onDoubleClick={() => setSelectedFile(f)}
+                  onDragStart={(e) => beginInternalDrag(e, k)}
+                />
+              );
+            })}
           </div>
         )}
       </div>
-      {selectedFile && <FileViewer file={selectedFile} onClose={() => setSelectedFile(null)} />}
+
+      <Toolbar
+        count={sel.count}
+        canRename={selectedFiles.length + selectedFolders.length === 1}
+        onClear={() => sel.clear()}
+        onDownload={downloadSelected}
+        onShare={shareSelected}
+        onCopyLink={copyShareLinks}
+        onRename={renameSelected}
+        onDelete={deleteSelected}
+      />
+
+      <DragLayer active={externalDrag} label="Solte para enviar à pasta atual" />
+
+      {selectedFile && <PreviewCard file={selectedFile} onClose={() => setSelectedFile(null)} />}
     </main>
-  );
-}
-
-function FileViewer({ file, onClose }: { file: FileRow; onClose: () => void }) {
-  const url = publicUrl(file.storage_path);
-  const mime = file.mime_type ?? "";
-  const isImage = mime.startsWith("image/");
-  const isVideo = mime.startsWith("video/");
-  const isAudio = mime.startsWith("audio/");
-  const isPdf = mime === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
-
-  return (
-    <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-xl flex flex-col">
-      <div className="border-b border-border/60 px-4 py-3 flex items-center gap-3">
-        <FileIcon className="w-5 h-5 text-primary shrink-0" strokeWidth={1.5} />
-        <div className="min-w-0 flex-1">
-          <div className="font-medium truncate">{file.name}</div>
-          <div className="text-xs text-muted-foreground">{formatBytes(file.size_bytes)}</div>
-        </div>
-        <a
-          href={url}
-          download={file.name}
-          target="_blank"
-          rel="noopener"
-          className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition"
-          title="Baixar"
-        >
-          <Download className="w-5 h-5" />
-        </a>
-        <button onClick={onClose} className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition" title="Fechar">
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-      <div className="flex-1 min-h-0 p-4 flex items-center justify-center">
-        {isImage ? (
-          <img src={url} alt={file.name} className="max-w-full max-h-full object-contain rounded-lg" />
-        ) : isVideo ? (
-          <video src={url} controls className="max-w-full max-h-full rounded-lg" />
-        ) : isAudio ? (
-          <audio src={url} controls className="w-full max-w-xl" />
-        ) : isPdf ? (
-          <iframe src={url} title={file.name} className="w-full h-full rounded-lg bg-card" />
-        ) : (
-          <div className="text-center max-w-sm">
-            <FileIcon className="w-16 h-16 mx-auto mb-4 text-muted-foreground" strokeWidth={1.2} />
-            <h2 className="font-display text-xl font-bold mb-2">Pré-visualização indisponível</h2>
-            <p className="text-sm text-muted-foreground mb-6">Este tipo de arquivo pode ser baixado, mas não visualizado diretamente no app.</p>
-            <a href={url} download={file.name} target="_blank" rel="noopener" className="inline-flex items-center gap-2 bg-primary text-primary-foreground rounded-xl px-5 py-3 font-semibold hover:opacity-90">
-              <Download className="w-5 h-5" /> Baixar arquivo
-            </a>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function IconBtn({ onClick, icon: Icon, danger, title }: {
-  onClick: () => void; icon: React.ComponentType<{ className?: string }>;
-  danger?: boolean; title?: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      title={title}
-      className={`p-2 rounded-lg hover:bg-secondary transition ${danger ? "text-destructive hover:text-destructive" : "text-muted-foreground hover:text-foreground"}`}
-    >
-      <Icon className="w-4 h-4" />
-    </button>
   );
 }
