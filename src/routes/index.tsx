@@ -20,15 +20,22 @@ function Index() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (getStoredUserId()) navigate({ to: "/app" });
+    const id = getStoredUserId();
+    if (!id) return;
+    (async () => {
+      const { fetchUser } = await import("@/lib/cloud");
+      const u = await fetchUser(id);
+      if (!u) return;
+      navigate({ to: u.activated_at ? "/app" : "/activate" });
+    })();
   }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await loginOrRegister(phone);
-      navigate({ to: "/app" });
+      const u = await loginOrRegister(phone);
+      navigate({ to: u.activated_at ? "/app" : "/activate" });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao entrar");
     } finally {
