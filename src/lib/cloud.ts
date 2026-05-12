@@ -8,6 +8,8 @@ export type CloudUser = {
   phone: string;
   used_bytes: number;
   quota_bytes: number;
+  activated_at: string | null;
+  activation_code: string | null;
 };
 
 export function getStoredUserId(): string | null {
