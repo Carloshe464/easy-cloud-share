@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useCallback, useRef } from "react";
 import {
   Cloud, Upload, Folder, FolderPlus, FileIcon, Download, Trash2, Pencil,
-  Share2, LogOut, ChevronRight, Loader2, Home, Copy,
+  Share2, LogOut, ChevronRight, Loader2, Home, Eye, X,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -31,15 +31,35 @@ function AppPage() {
   const [files, setFiles] = useState<FileRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<FileRow | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bootstrappedRef = useRef(false);
+  const refreshRunRef = useRef(0);
 
   useEffect(() => {
-    const id = getStoredUserId();
-    if (!id) { navigate({ to: "/" }); return; }
-    fetchUser(id).then((u) => {
-      if (!u) { clearStoredUser(); navigate({ to: "/" }); return; }
-      setUser(u);
-    });
+    if (bootstrappedRef.current) return;
+    bootstrappedRef.current = true;
+    let active = true;
+
+    const boot = async () => {
+      const id = getStoredUserId();
+      if (!id) {
+        navigate({ to: "/" });
+        return;
+      }
+
+      const u = await fetchUser(id);
+      if (!active) return;
+      if (!u) {
+        clearStoredUser();
+        navigate({ to: "/" });
+        return;
+      }
+      setUser((prev) => (prev?.id === u.id && prev.used_bytes === u.used_bytes && prev.quota_bytes === u.quota_bytes ? prev : u));
+    };
+
+    boot();
+    return () => { active = false; };
   }, [navigate]);
 
   const userId = user?.id;
@@ -47,26 +67,31 @@ function AppPage() {
 
   const refresh = useCallback(async () => {
     if (!userId) return;
+    const runId = ++refreshRunRef.current;
     setLoading(true);
-    let foldersQ = supabase.from("folders").select("*").eq("user_id", userId);
-    let filesQ = supabase.from("files").select("*").eq("user_id", userId);
-    if (folderId) {
-      foldersQ = foldersQ.eq("parent_id", folderId);
-      filesQ = filesQ.eq("folder_id", folderId);
-    } else {
-      foldersQ = foldersQ.is("parent_id", null);
-      filesQ = filesQ.is("folder_id", null);
+    try {
+      let foldersQ = supabase.from("folders").select("*").eq("user_id", userId);
+      let filesQ = supabase.from("files").select("*").eq("user_id", userId);
+      if (folderId) {
+        foldersQ = foldersQ.eq("parent_id", folderId);
+        filesQ = filesQ.eq("folder_id", folderId);
+      } else {
+        foldersQ = foldersQ.is("parent_id", null);
+        filesQ = filesQ.is("folder_id", null);
+      }
+      const [{ data: f }, { data: fi }, u] = await Promise.all([
+        foldersQ, filesQ, fetchUser(userId),
+      ]);
+      if (runId !== refreshRunRef.current) return;
+      setFolders((f as FolderRow[]) ?? []);
+      setFiles((fi as FileRow[]) ?? []);
+      if (u) setUser((prev) =>
+        prev && prev.id === u.id && prev.used_bytes === u.used_bytes && prev.quota_bytes === u.quota_bytes
+          ? prev : u
+      );
+    } finally {
+      if (runId === refreshRunRef.current) setLoading(false);
     }
-    const [{ data: f }, { data: fi }, u] = await Promise.all([
-      foldersQ, filesQ, fetchUser(userId),
-    ]);
-    setFolders((f as FolderRow[]) ?? []);
-    setFiles((fi as FileRow[]) ?? []);
-    if (u) setUser((prev) =>
-      prev && prev.used_bytes === u.used_bytes && prev.quota_bytes === u.quota_bytes
-        ? prev : u
-    );
-    setLoading(false);
   }, [userId, folderId]);
 
   useEffect(() => { refresh(); }, [refresh]);
