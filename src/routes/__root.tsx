@@ -73,14 +73,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "Nuvem Yes" },
+      { name: "description", content: "Cloud Drive Easy provides a public cloud storage solution accessible from any mobile device." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "Nuvem Yes" },
+      { property: "og:description", content: "Cloud Drive Easy provides a public cloud storage solution accessible from any mobile device." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "Nuvem Yes" },
+      { name: "twitter:description", content: "Cloud Drive Easy provides a public cloud storage solution accessible from any mobile device." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/f586f373-fc2d-4018-867a-9ccf52155580/id-preview-d109a524--1f72a17c-9a53-4f3b-9d14-154fe66d25c4.lovable.app-1778619039112.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/f586f373-fc2d-4018-867a-9ccf52155580/id-preview-d109a524--1f72a17c-9a53-4f3b-9d14-154fe66d25c4.lovable.app-1778619039112.png" },
     ],
     links: [
       {
