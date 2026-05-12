@@ -53,6 +53,7 @@ function AppPage() {
       const u = await fetchUser(id);
       if (!active) return;
       if (!u) { clearStoredUser(); navigate({ to: "/" }); return; }
+      if (!u.activated_at) { navigate({ to: "/activate" }); return; }
       setUser((prev) =>
         prev?.id === u.id && prev.used_bytes === u.used_bytes && prev.quota_bytes === u.quota_bytes
           ? prev : u
