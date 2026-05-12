@@ -15,6 +15,7 @@ import { FolderItem } from "@/components/cloud/FolderItem";
 import { Toolbar } from "@/components/cloud/Toolbar";
 import { PreviewCard } from "@/components/cloud/PreviewCard";
 import { DragLayer } from "@/components/cloud/DragLayer";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useSelection } from "@/components/cloud/SelectionManager";
 import {
   key as makeKey, type FileRow, type FolderRow, type SelectionKey,
@@ -444,6 +445,7 @@ function AppPage() {
             <div className="font-display font-bold text-lg leading-none">Nuvem Pública</div>
             <div className="text-xs text-muted-foreground truncate">{getStoredPhone()}</div>
           </div>
+          <ThemeToggle />
           <button
             onClick={handleLogout}
             aria-label="Sair"

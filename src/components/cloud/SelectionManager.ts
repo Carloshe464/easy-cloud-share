@@ -32,7 +32,6 @@ export function useSelection(): SelectionAPI {
 
   const handleClick = useCallback(
     (e: React.MouseEvent, k: SelectionKey, ordered: SelectionKey[]) => {
-      const meta = e.ctrlKey || e.metaKey;
       const shift = e.shiftKey;
       if (shift && anchorRef.current) {
         const a = ordered.indexOf(anchorRef.current);
@@ -48,15 +47,17 @@ export function useSelection(): SelectionAPI {
           return;
         }
       }
-      if (meta) {
+      // Once any item is selected, additional clicks toggle (add/remove) without modifier.
+      setSelected((prev) => {
         anchorRef.current = k;
-        toggle(k);
-        return;
-      }
-      anchorRef.current = k;
-      setSelected(new Set([k]));
+        if (prev.size === 0) return new Set([k]);
+        const next = new Set(prev);
+        if (next.has(k)) next.delete(k);
+        else next.add(k);
+        return next;
+      });
     },
-    [toggle]
+    []
   );
 
   return { selected, count: selected.size, isSelected, clear, selectAll, toggle, handleClick };
