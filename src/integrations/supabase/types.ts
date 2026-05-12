@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      activation_codes: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          used_at: string | null
+          used_by_user_id: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          used_at?: string | null
+          used_by_user_id?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          used_at?: string | null
+          used_by_user_id?: string | null
+        }
+        Relationships: []
+      }
       files: {
         Row: {
           created_at: string
@@ -106,6 +130,8 @@ export type Database = {
       }
       users: {
         Row: {
+          activated_at: string | null
+          activation_code: string | null
           created_at: string
           id: string
           phone: string
@@ -113,6 +139,8 @@ export type Database = {
           used_bytes: number
         }
         Insert: {
+          activated_at?: string | null
+          activation_code?: string | null
           created_at?: string
           id?: string
           phone: string
@@ -120,6 +148,8 @@ export type Database = {
           used_bytes?: number
         }
         Update: {
+          activated_at?: string | null
+          activation_code?: string | null
           created_at?: string
           id?: string
           phone?: string
