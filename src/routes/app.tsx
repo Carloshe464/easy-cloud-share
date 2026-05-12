@@ -33,12 +33,9 @@ function AppPage() {
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<FileRow | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const bootstrappedRef = useRef(false);
   const refreshRunRef = useRef(0);
 
   useEffect(() => {
-    if (bootstrappedRef.current) return;
-    bootstrappedRef.current = true;
     let active = true;
 
     const boot = async () => {
@@ -201,7 +198,13 @@ function AppPage() {
     }
   };
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <main className="min-h-screen flex items-center justify-center text-muted-foreground">
+        <Loader2 className="w-6 h-6 animate-spin" />
+      </main>
+    );
+  }
   const usedPct = (user.used_bytes / user.quota_bytes) * 100;
 
   return (
