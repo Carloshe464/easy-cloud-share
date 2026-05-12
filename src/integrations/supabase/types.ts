@@ -14,7 +14,120 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      files: {
+        Row: {
+          created_at: string
+          folder_id: string | null
+          id: string
+          mime_type: string | null
+          name: string
+          share_token: string
+          size_bytes: number
+          storage_path: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          folder_id?: string | null
+          id?: string
+          mime_type?: string | null
+          name: string
+          share_token?: string
+          size_bytes?: number
+          storage_path: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          folder_id?: string | null
+          id?: string
+          mime_type?: string | null
+          name?: string
+          share_token?: string
+          size_bytes?: number
+          storage_path?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "files_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "files_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      folders: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          parent_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          parent_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          parent_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folders_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "folders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          created_at: string
+          id: string
+          phone: string
+          quota_bytes: number
+          used_bytes: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          phone: string
+          quota_bytes?: number
+          used_bytes?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          phone?: string
+          quota_bytes?: number
+          used_bytes?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
