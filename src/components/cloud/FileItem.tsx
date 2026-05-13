@@ -31,9 +31,9 @@ export function FileItem({ file, selected, onClick, onDoubleClick, onDragStart }
       }}
       onDragStart={onDragStart}
       className={[
-        "group select-none cursor-pointer rounded-xl ring-1 transition-all duration-150 backdrop-blur overflow-hidden",
-        "bg-card/60 hover:ring-primary/40",
-        selected ? "ring-primary bg-primary/10" : "ring-border",
+        "nflx-tile group select-none cursor-pointer rounded-md ring-1 overflow-hidden",
+        "bg-card",
+        selected ? "ring-2 ring-primary" : "ring-border/60",
       ].join(" ")}
     >
       <div className="relative aspect-video w-full bg-secondary/40 flex items-center justify-center overflow-hidden">
