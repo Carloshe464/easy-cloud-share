@@ -1,18 +1,21 @@
-import { Download, Link2, Pencil, Share2, Trash2, X } from "lucide-react";
+import { Download, FolderMinus, Link2, Pencil, Share2, Trash2, X } from "lucide-react";
 
 type Props = {
   count: number;
   canRename: boolean;
+  canRemoveFromFolder?: boolean;
   onClear: () => void;
   onDownload: () => void;
   onShare: () => void;
   onCopyLink: () => void;
   onRename: () => void;
+  onRemoveFromFolder?: () => void;
   onDelete: () => void;
 };
 
 export function Toolbar({
-  count, canRename, onClear, onDownload, onShare, onCopyLink, onRename, onDelete,
+  count, canRename, canRemoveFromFolder, onClear, onDownload, onShare, onCopyLink,
+  onRename, onRemoveFromFolder, onDelete,
 }: Props) {
   if (count === 0) return null;
   return (
@@ -34,6 +37,9 @@ export function Toolbar({
           <Action icon={Share2} label="Compartilhar" onClick={onShare} />
           <Action icon={Link2} label="Link público" onClick={onCopyLink} />
           {canRename && <Action icon={Pencil} label="Renomear" onClick={onRename} />}
+          {canRemoveFromFolder && onRemoveFromFolder && (
+            <Action icon={FolderMinus} label="Tirar da pasta" onClick={onRemoveFromFolder} />
+          )}
           <Action icon={Trash2} label="Excluir" onClick={onDelete} danger />
         </div>
       </div>
