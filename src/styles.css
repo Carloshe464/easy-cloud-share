@@ -33,28 +33,29 @@
 
 :root {
   --radius: 0.875rem;
-  --background: oklch(0.16 0.02 250);
-  --foreground: oklch(0.97 0.01 250);
-  --card: oklch(0.21 0.025 250);
-  --card-foreground: oklch(0.97 0.01 250);
-  --popover: oklch(0.21 0.025 250);
-  --popover-foreground: oklch(0.97 0.01 250);
-  --primary: oklch(0.78 0.16 195);
-  --primary-foreground: oklch(0.16 0.02 250);
-  --secondary: oklch(0.27 0.03 250);
-  --secondary-foreground: oklch(0.97 0.01 250);
-  --muted: oklch(0.24 0.025 250);
-  --muted-foreground: oklch(0.68 0.03 250);
-  --accent: oklch(0.7 0.18 310);
-  --accent-foreground: oklch(0.16 0.02 250);
-  --destructive: oklch(0.65 0.22 25);
+  --background: oklch(0.13 0.005 270);
+  --foreground: oklch(0.97 0.005 270);
+  --card: oklch(0.18 0.006 270);
+  --card-foreground: oklch(0.97 0.005 270);
+  --popover: oklch(0.18 0.006 270);
+  --popover-foreground: oklch(0.97 0.005 270);
+  --primary: oklch(0.96 0.005 270);
+  --primary-foreground: oklch(0.14 0.005 270);
+  --secondary: oklch(0.24 0.006 270);
+  --secondary-foreground: oklch(0.96 0.005 270);
+  --muted: oklch(0.21 0.006 270);
+  --muted-foreground: oklch(0.66 0.01 270);
+  --accent: oklch(0.85 0.01 270);
+  --accent-foreground: oklch(0.14 0.005 270);
+  --destructive: oklch(0.6 0.2 25);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.3 0.03 250);
-  --input: oklch(0.27 0.03 250);
-  --ring: oklch(0.78 0.16 195);
-  --gradient-aurora: radial-gradient(ellipse at top, oklch(0.78 0.16 195 / 0.25), transparent 60%),
-    radial-gradient(ellipse at bottom right, oklch(0.7 0.18 310 / 0.2), transparent 60%);
-  --shadow-glow: 0 0 60px -12px oklch(0.78 0.16 195 / 0.5);
+  --border: oklch(0.27 0.006 270);
+  --input: oklch(0.24 0.006 270);
+  --ring: oklch(0.7 0.01 270);
+  --gradient-aurora:
+    radial-gradient(ellipse at top, oklch(0.3 0.01 270 / 0.4), transparent 60%),
+    radial-gradient(ellipse at bottom right, oklch(0.22 0.008 270 / 0.5), transparent 60%);
+  --shadow-glow: 0 0 60px -12px oklch(0 0 0 / 0.6);
 }
 
 :root.light {
