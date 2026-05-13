@@ -582,11 +582,13 @@ function AppPage() {
       <Toolbar
         count={sel.count}
         canRename={selectedFiles.length + selectedFolders.length === 1}
+        canRemoveFromFolder={!!currentFolder && sel.count > 0}
         onClear={() => sel.clear()}
         onDownload={downloadSelected}
         onShare={shareSelected}
         onCopyLink={copyShareLinks}
         onRename={renameSelected}
+        onRemoveFromFolder={() => moveItemsToFolder(Array.from(sel.selected), null)}
         onDelete={deleteSelected}
       />
 
