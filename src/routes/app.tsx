@@ -438,18 +438,17 @@ function AppPage() {
 
   return (
     <main className="min-h-screen pb-28">
-      <header className="border-b border-border/50 backdrop-blur-xl bg-background/40 sticky top-0 z-20">
+      <header className="border-b border-border/40 backdrop-blur-xl bg-background/80 sticky top-0 z-20">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-4">
-          <Cloud className="w-7 h-7 text-primary" strokeWidth={1.5} />
-          <div className="flex-1 min-w-0">
-            <div className="font-display font-bold text-lg leading-none">Nuvem Pública</div>
-            <div className="text-xs text-muted-foreground truncate">{getStoredPhone()}</div>
+          <div className="nflx-logo text-2xl sm:text-3xl leading-none">NUVEMFLIX</div>
+          <div className="flex-1 min-w-0 hidden sm:block">
+            <div className="text-xs text-muted-foreground truncate uppercase tracking-wider">{getStoredPhone()}</div>
           </div>
           <ThemeToggle />
           <button
             onClick={handleLogout}
             aria-label="Sair"
-            className="text-muted-foreground hover:text-foreground p-2 rounded-lg hover:bg-secondary"
+            className="text-muted-foreground hover:text-foreground p-2 rounded-md hover:bg-secondary"
           >
             <LogOut className="w-5 h-5" />
           </button>
