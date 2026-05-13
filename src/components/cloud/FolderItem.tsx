@@ -34,10 +34,10 @@ export function FolderItem({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
       className={[
-        "group select-none cursor-pointer rounded-xl p-4 ring-1 transition-all duration-150 flex items-center gap-3 backdrop-blur",
-        "bg-card/60 hover:ring-primary/40",
-        selected ? "ring-primary bg-primary/10" : "ring-border",
-        dropActive ? "ring-2 ring-accent bg-accent/10 scale-[1.02] shadow-lg shadow-accent/20" : "",
+        "nflx-tile group select-none cursor-pointer rounded-md p-4 ring-1 flex items-center gap-3",
+        "bg-card",
+        selected ? "ring-2 ring-primary" : "ring-border/60",
+        dropActive ? "ring-2 ring-primary scale-[1.03] shadow-lg shadow-primary/30" : "",
       ].join(" ")}
     >
       <Folder
