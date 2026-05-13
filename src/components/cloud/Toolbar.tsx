@@ -37,6 +37,9 @@ export function Toolbar({
           <Action icon={Share2} label="Compartilhar" onClick={onShare} />
           <Action icon={Link2} label="Link público" onClick={onCopyLink} />
           {canRename && <Action icon={Pencil} label="Renomear" onClick={onRename} />}
+          {canRemoveFromFolder && onRemoveFromFolder && (
+            <Action icon={FolderMinus} label="Tirar da pasta" onClick={onRemoveFromFolder} />
+          )}
           <Action icon={Trash2} label="Excluir" onClick={onDelete} danger />
         </div>
       </div>
