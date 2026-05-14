@@ -189,8 +189,10 @@ function AppPage() {
     selectedFiles.forEach((f, i) => {
       setTimeout(() => {
         const a = document.createElement("a");
-        a.href = publicUrl(f.storage_path);
-        a.download = f.name;
+        a.href = f.external_url ?? (f.storage_path ? publicUrl(f.storage_path) : "");
+        if (!a.href) return;
+        if (f.external_url) a.rel = "noopener";
+        else a.download = f.name;
         a.target = "_blank";
         document.body.appendChild(a); a.click(); a.remove();
       }, i * 150);
