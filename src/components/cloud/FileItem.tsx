@@ -1,7 +1,10 @@
-import { FileIcon, Music } from "lucide-react";
+import { FileIcon, Link2, Music, Play } from "lucide-react";
 import { useState } from "react";
 import { formatBytes, publicUrl } from "@/lib/cloud";
-import { isAudio, isImage, isVideo, type FileRow } from "./types";
+import {
+  detectExternalKind, isAudio, isExternalLink, isImage, isVideo, youtubeThumb,
+  type FileRow,
+} from "./types";
 
 type Props = {
   file: FileRow;
@@ -12,11 +15,13 @@ type Props = {
 };
 
 export function FileItem({ file, selected, onClick, onDoubleClick, onDragStart }: Props) {
-  const url = publicUrl(file.storage_path);
-  const img = isImage(file.mime_type, file.name);
-  const vid = isVideo(file.mime_type, file.name);
-  const aud = isAudio(file.mime_type, file.name);
   const [errored, setErrored] = useState(false);
+  const ext = isExternalLink(file) && file.external_url ? detectExternalKind(file.external_url) : null;
+
+  const url = !ext && file.storage_path ? publicUrl(file.storage_path) : "";
+  const img = !ext && isImage(file.mime_type, file.name);
+  const vid = !ext && isVideo(file.mime_type, file.name);
+  const aud = !ext && isAudio(file.mime_type, file.name);
 
   return (
     <div
@@ -26,9 +31,7 @@ export function FileItem({ file, selected, onClick, onDoubleClick, onDragStart }
       aria-selected={selected}
       onClick={onClick}
       onDoubleClick={onDoubleClick}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") onDoubleClick();
-      }}
+      onKeyDown={(e) => { if (e.key === "Enter") onDoubleClick(); }}
       onDragStart={onDragStart}
       className={[
         "nflx-tile group select-none cursor-pointer rounded-md ring-1 overflow-hidden",
@@ -37,25 +40,33 @@ export function FileItem({ file, selected, onClick, onDoubleClick, onDragStart }
       ].join(" ")}
     >
       <div className="relative aspect-video w-full bg-secondary/40 flex items-center justify-center overflow-hidden">
-        {img && !errored ? (
-          <img
-            src={url}
-            alt={file.name}
-            loading="lazy"
-            decoding="async"
-            onError={() => setErrored(true)}
-            className="w-full h-full object-cover"
-            draggable={false}
-          />
+        {ext ? (
+          ext.kind === "image" && !errored ? (
+            <img src={ext.src} alt={file.name} loading="lazy" onError={() => setErrored(true)}
+              className="w-full h-full object-cover" draggable={false} />
+          ) : ext.kind === "youtube" ? (
+            <>
+              {youtubeThumb(ext.src) && !errored ? (
+                <img src={youtubeThumb(ext.src)!} alt={file.name} loading="lazy"
+                  onError={() => setErrored(true)} className="w-full h-full object-cover" draggable={false} />
+              ) : <Link2 className="w-12 h-12 text-primary/70" strokeWidth={1.2} />}
+              <Play className="absolute w-10 h-10 text-white drop-shadow-lg" fill="currentColor" />
+            </>
+          ) : ext.kind === "video" && !errored ? (
+            <video src={`${ext.src}#t=0.5`} preload="metadata" muted playsInline
+              onError={() => setErrored(true)} className="w-full h-full object-cover" />
+          ) : (
+            <div className="flex flex-col items-center gap-1 text-primary/70">
+              <Link2 className="w-10 h-10" strokeWidth={1.2} />
+              <span className="text-[10px] uppercase tracking-wider">{ext.kind}</span>
+            </div>
+          )
+        ) : img && !errored ? (
+          <img src={url} alt={file.name} loading="lazy" decoding="async"
+            onError={() => setErrored(true)} className="w-full h-full object-cover" draggable={false} />
         ) : vid && !errored ? (
-          <video
-            src={`${url}#t=0.5`}
-            preload="metadata"
-            muted
-            playsInline
-            onError={() => setErrored(true)}
-            className="w-full h-full object-cover"
-          />
+          <video src={`${url}#t=0.5`} preload="metadata" muted playsInline
+            onError={() => setErrored(true)} className="w-full h-full object-cover" />
         ) : aud ? (
           <div className="w-full h-full flex flex-col items-center justify-center gap-2 px-3">
             <Music className="w-8 h-8 text-primary" strokeWidth={1.5} />
@@ -69,10 +80,17 @@ export function FileItem({ file, selected, onClick, onDoubleClick, onDragStart }
             ✓
           </div>
         )}
+        {ext && (
+          <div className="absolute top-2 right-2 bg-black/60 text-white rounded-md p-1">
+            <Link2 className="w-3 h-3" />
+          </div>
+        )}
       </div>
       <div className="p-3">
         <div className="font-medium truncate text-sm">{file.name}</div>
-        <div className="text-xs text-muted-foreground">{formatBytes(file.size_bytes)}</div>
+        <div className="text-xs text-muted-foreground truncate">
+          {ext ? new URL(file.external_url!).hostname.replace(/^www\./, "") : formatBytes(file.size_bytes)}
+        </div>
       </div>
     </div>
   );

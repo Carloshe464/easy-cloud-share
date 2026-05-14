@@ -189,8 +189,10 @@ function AppPage() {
     selectedFiles.forEach((f, i) => {
       setTimeout(() => {
         const a = document.createElement("a");
-        a.href = publicUrl(f.storage_path);
-        a.download = f.name;
+        a.href = f.external_url ?? (f.storage_path ? publicUrl(f.storage_path) : "");
+        if (!a.href) return;
+        if (f.external_url) a.rel = "noopener";
+        else a.download = f.name;
         a.target = "_blank";
         document.body.appendChild(a); a.click(); a.remove();
       }, i * 150);
@@ -244,13 +246,15 @@ function AppPage() {
     const tId = toast.loading("Excluindo...");
     try {
       if (selectedFiles.length) {
-        await supabase.storage.from("cloud-files").remove(selectedFiles.map((f) => f.storage_path));
+        const paths = selectedFiles.map((f) => f.storage_path).filter((p): p is string => !!p);
+        if (paths.length) await supabase.storage.from("cloud-files").remove(paths);
         await supabase.from("files").delete().in("id", selectedFiles.map((f) => f.id));
       }
       for (const fo of selectedFolders) {
         const { data: childFiles } = await supabase.from("files").select("storage_path").eq("folder_id", fo.id);
-        if (childFiles?.length) {
-          await supabase.storage.from("cloud-files").remove(childFiles.map((c) => c.storage_path));
+        const childPaths = (childFiles ?? []).map((c) => c.storage_path).filter((p): p is string => !!p);
+        if (childPaths.length) {
+          await supabase.storage.from("cloud-files").remove(childPaths);
         }
         await supabase.from("folders").delete().eq("id", fo.id);
       }
@@ -607,7 +611,25 @@ function AppPage() {
       <DragLayer active={externalDrag} label="Solte para enviar à pasta atual" />
 
       {selectedFile && <PreviewCard file={selectedFile} onClose={() => setSelectedFile(null)} />}
-      {linkViewerOpen && <ExternalLinkViewer onClose={() => setLinkViewerOpen(false)} />}
+      {linkViewerOpen && (
+        <ExternalLinkViewer
+          onClose={() => setLinkViewerOpen(false)}
+          onSave={async ({ url, name }) => {
+            if (!user) return;
+            const { error } = await supabase.from("files").insert({
+              user_id: user.id,
+              folder_id: currentFolder?.id ?? null,
+              name,
+              storage_path: null,
+              external_url: url,
+              size_bytes: 0,
+              mime_type: "application/x-external-link",
+            });
+            if (error) toast.error(error.message);
+            else { toast.success("Link adicionado"); refresh(); }
+          }}
+        />
+      )}
     </main>
   );
 }
