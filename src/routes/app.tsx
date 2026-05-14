@@ -246,13 +246,15 @@ function AppPage() {
     const tId = toast.loading("Excluindo...");
     try {
       if (selectedFiles.length) {
-        await supabase.storage.from("cloud-files").remove(selectedFiles.map((f) => f.storage_path));
+        const paths = selectedFiles.map((f) => f.storage_path).filter((p): p is string => !!p);
+        if (paths.length) await supabase.storage.from("cloud-files").remove(paths);
         await supabase.from("files").delete().in("id", selectedFiles.map((f) => f.id));
       }
       for (const fo of selectedFolders) {
         const { data: childFiles } = await supabase.from("files").select("storage_path").eq("folder_id", fo.id);
-        if (childFiles?.length) {
-          await supabase.storage.from("cloud-files").remove(childFiles.map((c) => c.storage_path));
+        const childPaths = (childFiles ?? []).map((c) => c.storage_path).filter((p): p is string => !!p);
+        if (childPaths.length) {
+          await supabase.storage.from("cloud-files").remove(childPaths);
         }
         await supabase.from("folders").delete().eq("id", fo.id);
       }
