@@ -2,8 +2,9 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import {
   Cloud, Upload, FolderPlus, LogOut, ChevronRight, Loader2, Home,
-  CheckSquare, Square,
+  CheckSquare, Square, Link as LinkIcon,
 } from "lucide-react";
+import { ExternalLinkViewer } from "@/components/cloud/ExternalLinkViewer";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getStoredUserId, getStoredPhone, clearStoredUser, fetchUser,
@@ -40,6 +41,7 @@ function AppPage() {
   const [selectedFile, setSelectedFile] = useState<FileRow | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null); // folder id
   const [externalDrag, setExternalDrag] = useState(false);
+  const [linkViewerOpen, setLinkViewerOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const refreshRunRef = useRef(0);
 
@@ -440,10 +442,21 @@ function AppPage() {
     <main className="min-h-screen pb-28">
       <header className="border-b border-border/40 backdrop-blur-xl bg-background/80 sticky top-0 z-20">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-4">
-          <div className="nflx-logo text-2xl sm:text-3xl leading-none">NUVEMFLIX</div>
-          <div className="flex-1 min-w-0 hidden sm:block">
-            <div className="text-xs text-muted-foreground truncate uppercase tracking-wider">{getStoredPhone()}</div>
+          <div className="flex items-center gap-2 min-w-0">
+            <Cloud className="w-6 h-6 text-primary shrink-0" strokeWidth={1.8} />
+            <span className="font-display text-xl sm:text-2xl tracking-wide leading-none">Minha Nuvem</span>
           </div>
+          <div className="flex-1 min-w-0 hidden sm:block">
+            <div className="text-xs text-muted-foreground truncate">{getStoredPhone()}</div>
+          </div>
+          <button
+            onClick={() => setLinkViewerOpen(true)}
+            aria-label="Visualizar link externo"
+            title="Visualizar link"
+            className="text-muted-foreground hover:text-foreground p-2 rounded-md hover:bg-secondary"
+          >
+            <LinkIcon className="w-5 h-5" />
+          </button>
           <ThemeToggle />
           <button
             onClick={handleLogout}
@@ -594,6 +607,7 @@ function AppPage() {
       <DragLayer active={externalDrag} label="Solte para enviar à pasta atual" />
 
       {selectedFile && <PreviewCard file={selectedFile} onClose={() => setSelectedFile(null)} />}
+      {linkViewerOpen && <ExternalLinkViewer onClose={() => setLinkViewerOpen(false)} />}
     </main>
   );
 }
