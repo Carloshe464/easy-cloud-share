@@ -41,35 +41,38 @@ export type Database = {
       files: {
         Row: {
           created_at: string
+          external_url: string | null
           folder_id: string | null
           id: string
           mime_type: string | null
           name: string
           share_token: string
           size_bytes: number
-          storage_path: string
+          storage_path: string | null
           user_id: string
         }
         Insert: {
           created_at?: string
+          external_url?: string | null
           folder_id?: string | null
           id?: string
           mime_type?: string | null
           name: string
           share_token?: string
           size_bytes?: number
-          storage_path: string
+          storage_path?: string | null
           user_id: string
         }
         Update: {
           created_at?: string
+          external_url?: string | null
           folder_id?: string | null
           id?: string
           mime_type?: string | null
           name?: string
           share_token?: string
           size_bytes?: number
-          storage_path?: string
+          storage_path?: string | null
           user_id?: string
         }
         Relationships: [
