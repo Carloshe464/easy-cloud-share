@@ -611,7 +611,25 @@ function AppPage() {
       <DragLayer active={externalDrag} label="Solte para enviar à pasta atual" />
 
       {selectedFile && <PreviewCard file={selectedFile} onClose={() => setSelectedFile(null)} />}
-      {linkViewerOpen && <ExternalLinkViewer onClose={() => setLinkViewerOpen(false)} />}
+      {linkViewerOpen && (
+        <ExternalLinkViewer
+          onClose={() => setLinkViewerOpen(false)}
+          onSave={async ({ url, name }) => {
+            if (!user) return;
+            const { error } = await supabase.from("files").insert({
+              user_id: user.id,
+              folder_id: currentFolder?.id ?? null,
+              name,
+              storage_path: null,
+              external_url: url,
+              size_bytes: 0,
+              mime_type: "application/x-external-link",
+            });
+            if (error) toast.error(error.message);
+            else { toast.success("Link adicionado"); refresh(); }
+          }}
+        />
+      )}
     </main>
   );
 }
