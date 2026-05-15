@@ -9,12 +9,21 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as StreamingRouteImport } from './routes/streaming'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ActivateRouteImport } from './routes/activate'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as StreamingIndexRouteImport } from './routes/streaming.index'
+import { Route as StreamingAdminRouteImport } from './routes/streaming.admin'
 import { Route as STokenRouteImport } from './routes/s.$token'
+import { Route as StreamingWatchIdRouteImport } from './routes/streaming.watch.$id'
 
+const StreamingRoute = StreamingRouteImport.update({
+  id: '/streaming',
+  path: '/streaming',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppRoute = AppRouteImport.update({
   id: '/app',
   path: '/app',
@@ -35,10 +44,25 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StreamingIndexRoute = StreamingIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => StreamingRoute,
+} as any)
+const StreamingAdminRoute = StreamingAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => StreamingRoute,
+} as any)
 const STokenRoute = STokenRouteImport.update({
   id: '/s/$token',
   path: '/s/$token',
   getParentRoute: () => rootRouteImport,
+} as any)
+const StreamingWatchIdRoute = StreamingWatchIdRouteImport.update({
+  id: '/watch/$id',
+  path: '/watch/$id',
+  getParentRoute: () => StreamingRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -46,7 +70,11 @@ export interface FileRoutesByFullPath {
   '/activate': typeof ActivateRoute
   '/admin': typeof AdminRoute
   '/app': typeof AppRoute
+  '/streaming': typeof StreamingRouteWithChildren
   '/s/$token': typeof STokenRoute
+  '/streaming/admin': typeof StreamingAdminRoute
+  '/streaming/': typeof StreamingIndexRoute
+  '/streaming/watch/$id': typeof StreamingWatchIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +82,9 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/app': typeof AppRoute
   '/s/$token': typeof STokenRoute
+  '/streaming/admin': typeof StreamingAdminRoute
+  '/streaming': typeof StreamingIndexRoute
+  '/streaming/watch/$id': typeof StreamingWatchIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -61,14 +92,45 @@ export interface FileRoutesById {
   '/activate': typeof ActivateRoute
   '/admin': typeof AdminRoute
   '/app': typeof AppRoute
+  '/streaming': typeof StreamingRouteWithChildren
   '/s/$token': typeof STokenRoute
+  '/streaming/admin': typeof StreamingAdminRoute
+  '/streaming/': typeof StreamingIndexRoute
+  '/streaming/watch/$id': typeof StreamingWatchIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/activate' | '/admin' | '/app' | '/s/$token'
+  fullPaths:
+    | '/'
+    | '/activate'
+    | '/admin'
+    | '/app'
+    | '/streaming'
+    | '/s/$token'
+    | '/streaming/admin'
+    | '/streaming/'
+    | '/streaming/watch/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/activate' | '/admin' | '/app' | '/s/$token'
-  id: '__root__' | '/' | '/activate' | '/admin' | '/app' | '/s/$token'
+  to:
+    | '/'
+    | '/activate'
+    | '/admin'
+    | '/app'
+    | '/s/$token'
+    | '/streaming/admin'
+    | '/streaming'
+    | '/streaming/watch/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/activate'
+    | '/admin'
+    | '/app'
+    | '/streaming'
+    | '/s/$token'
+    | '/streaming/admin'
+    | '/streaming/'
+    | '/streaming/watch/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -76,11 +138,19 @@ export interface RootRouteChildren {
   ActivateRoute: typeof ActivateRoute
   AdminRoute: typeof AdminRoute
   AppRoute: typeof AppRoute
+  StreamingRoute: typeof StreamingRouteWithChildren
   STokenRoute: typeof STokenRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/streaming': {
+      id: '/streaming'
+      path: '/streaming'
+      fullPath: '/streaming'
+      preLoaderRoute: typeof StreamingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/app': {
       id: '/app'
       path: '/app'
@@ -109,6 +179,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/streaming/': {
+      id: '/streaming/'
+      path: '/'
+      fullPath: '/streaming/'
+      preLoaderRoute: typeof StreamingIndexRouteImport
+      parentRoute: typeof StreamingRoute
+    }
+    '/streaming/admin': {
+      id: '/streaming/admin'
+      path: '/admin'
+      fullPath: '/streaming/admin'
+      preLoaderRoute: typeof StreamingAdminRouteImport
+      parentRoute: typeof StreamingRoute
+    }
     '/s/$token': {
       id: '/s/$token'
       path: '/s/$token'
@@ -116,26 +200,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof STokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/streaming/watch/$id': {
+      id: '/streaming/watch/$id'
+      path: '/watch/$id'
+      fullPath: '/streaming/watch/$id'
+      preLoaderRoute: typeof StreamingWatchIdRouteImport
+      parentRoute: typeof StreamingRoute
+    }
   }
 }
+
+interface StreamingRouteChildren {
+  StreamingAdminRoute: typeof StreamingAdminRoute
+  StreamingIndexRoute: typeof StreamingIndexRoute
+  StreamingWatchIdRoute: typeof StreamingWatchIdRoute
+}
+
+const StreamingRouteChildren: StreamingRouteChildren = {
+  StreamingAdminRoute: StreamingAdminRoute,
+  StreamingIndexRoute: StreamingIndexRoute,
+  StreamingWatchIdRoute: StreamingWatchIdRoute,
+}
+
+const StreamingRouteWithChildren = StreamingRoute._addFileChildren(
+  StreamingRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ActivateRoute: ActivateRoute,
   AdminRoute: AdminRoute,
   AppRoute: AppRoute,
+  StreamingRoute: StreamingRouteWithChildren,
   STokenRoute: STokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

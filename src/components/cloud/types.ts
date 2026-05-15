@@ -8,6 +8,8 @@ export type FileRow = {
   share_token: string;
   folder_id: string | null;
   external_url?: string | null;
+  poster_url?: string | null;
+  description?: string | null;
 };
 
 export type ItemKind = "file" | "folder";

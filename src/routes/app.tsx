@@ -461,6 +461,10 @@ function AppPage() {
           >
             <LinkIcon className="w-5 h-5" />
           </button>
+          <a href="/streaming" title="Modo streaming"
+            className="text-xs font-bold uppercase tracking-wider text-primary hover:opacity-80 px-2 py-1 rounded-md ring-1 ring-primary/30 hover:ring-primary/60 transition">
+            Play
+          </a>
           <ThemeToggle />
           <button
             onClick={handleLogout}
