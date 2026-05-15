@@ -16,6 +16,7 @@ import { Route as ActivateRouteImport } from './routes/activate'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StreamingIndexRouteImport } from './routes/streaming.index'
 import { Route as STokenRouteImport } from './routes/s.$token'
+import { Route as StreamingWatchIdRouteImport } from './routes/streaming.watch.$id'
 
 const StreamingRoute = StreamingRouteImport.update({
   id: '/streaming',
@@ -52,6 +53,11 @@ const STokenRoute = STokenRouteImport.update({
   path: '/s/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StreamingWatchIdRoute = StreamingWatchIdRouteImport.update({
+  id: '/watch/$id',
+  path: '/watch/$id',
+  getParentRoute: () => StreamingRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -61,6 +67,7 @@ export interface FileRoutesByFullPath {
   '/streaming': typeof StreamingRouteWithChildren
   '/s/$token': typeof STokenRoute
   '/streaming/': typeof StreamingIndexRoute
+  '/streaming/watch/$id': typeof StreamingWatchIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   '/app': typeof AppRoute
   '/s/$token': typeof STokenRoute
   '/streaming': typeof StreamingIndexRoute
+  '/streaming/watch/$id': typeof StreamingWatchIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/streaming': typeof StreamingRouteWithChildren
   '/s/$token': typeof STokenRoute
   '/streaming/': typeof StreamingIndexRoute
+  '/streaming/watch/$id': typeof StreamingWatchIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -90,8 +99,16 @@ export interface FileRouteTypes {
     | '/streaming'
     | '/s/$token'
     | '/streaming/'
+    | '/streaming/watch/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/activate' | '/admin' | '/app' | '/s/$token' | '/streaming'
+  to:
+    | '/'
+    | '/activate'
+    | '/admin'
+    | '/app'
+    | '/s/$token'
+    | '/streaming'
+    | '/streaming/watch/$id'
   id:
     | '__root__'
     | '/'
@@ -101,6 +118,7 @@ export interface FileRouteTypes {
     | '/streaming'
     | '/s/$token'
     | '/streaming/'
+    | '/streaming/watch/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -163,15 +181,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof STokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/streaming/watch/$id': {
+      id: '/streaming/watch/$id'
+      path: '/watch/$id'
+      fullPath: '/streaming/watch/$id'
+      preLoaderRoute: typeof StreamingWatchIdRouteImport
+      parentRoute: typeof StreamingRoute
+    }
   }
 }
 
 interface StreamingRouteChildren {
   StreamingIndexRoute: typeof StreamingIndexRoute
+  StreamingWatchIdRoute: typeof StreamingWatchIdRoute
 }
 
 const StreamingRouteChildren: StreamingRouteChildren = {
   StreamingIndexRoute: StreamingIndexRoute,
+  StreamingWatchIdRoute: StreamingWatchIdRoute,
 }
 
 const StreamingRouteWithChildren = StreamingRoute._addFileChildren(
