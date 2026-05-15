@@ -30,8 +30,8 @@ function StreamingLayout() {
   }, []);
 
   const phone = getStoredPhone() ?? "";
-  const search = (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("q")) ?? "";
-  const [q, setQ] = useState(search);
+  const initialQ = typeof window !== "undefined" ? (new URLSearchParams(window.location.search).get("q") ?? "") : "";
+  const [q, setQ] = useState<string>(initialQ);
 
   const onSearch = (e: React.FormEvent) => {
     e.preventDefault();
