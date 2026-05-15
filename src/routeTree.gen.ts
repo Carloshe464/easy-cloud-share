@@ -9,12 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as StreamingRouteImport } from './routes/streaming'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ActivateRouteImport } from './routes/activate'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as STokenRouteImport } from './routes/s.$token'
 
+const StreamingRoute = StreamingRouteImport.update({
+  id: '/streaming',
+  path: '/streaming',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppRoute = AppRouteImport.update({
   id: '/app',
   path: '/app',
@@ -46,6 +52,7 @@ export interface FileRoutesByFullPath {
   '/activate': typeof ActivateRoute
   '/admin': typeof AdminRoute
   '/app': typeof AppRoute
+  '/streaming': typeof StreamingRoute
   '/s/$token': typeof STokenRoute
 }
 export interface FileRoutesByTo {
@@ -53,6 +60,7 @@ export interface FileRoutesByTo {
   '/activate': typeof ActivateRoute
   '/admin': typeof AdminRoute
   '/app': typeof AppRoute
+  '/streaming': typeof StreamingRoute
   '/s/$token': typeof STokenRoute
 }
 export interface FileRoutesById {
@@ -61,14 +69,22 @@ export interface FileRoutesById {
   '/activate': typeof ActivateRoute
   '/admin': typeof AdminRoute
   '/app': typeof AppRoute
+  '/streaming': typeof StreamingRoute
   '/s/$token': typeof STokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/activate' | '/admin' | '/app' | '/s/$token'
+  fullPaths: '/' | '/activate' | '/admin' | '/app' | '/streaming' | '/s/$token'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/activate' | '/admin' | '/app' | '/s/$token'
-  id: '__root__' | '/' | '/activate' | '/admin' | '/app' | '/s/$token'
+  to: '/' | '/activate' | '/admin' | '/app' | '/streaming' | '/s/$token'
+  id:
+    | '__root__'
+    | '/'
+    | '/activate'
+    | '/admin'
+    | '/app'
+    | '/streaming'
+    | '/s/$token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -76,11 +92,19 @@ export interface RootRouteChildren {
   ActivateRoute: typeof ActivateRoute
   AdminRoute: typeof AdminRoute
   AppRoute: typeof AppRoute
+  StreamingRoute: typeof StreamingRoute
   STokenRoute: typeof STokenRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/streaming': {
+      id: '/streaming'
+      path: '/streaming'
+      fullPath: '/streaming'
+      preLoaderRoute: typeof StreamingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/app': {
       id: '/app'
       path: '/app'
@@ -124,8 +148,19 @@ const rootRouteChildren: RootRouteChildren = {
   ActivateRoute: ActivateRoute,
   AdminRoute: AdminRoute,
   AppRoute: AppRoute,
+  StreamingRoute: StreamingRoute,
   STokenRoute: STokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
