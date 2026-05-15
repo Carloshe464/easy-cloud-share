@@ -15,6 +15,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ActivateRouteImport } from './routes/activate'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StreamingIndexRouteImport } from './routes/streaming.index'
+import { Route as StreamingAdminRouteImport } from './routes/streaming.admin'
 import { Route as STokenRouteImport } from './routes/s.$token'
 import { Route as StreamingWatchIdRouteImport } from './routes/streaming.watch.$id'
 
@@ -48,6 +49,11 @@ const StreamingIndexRoute = StreamingIndexRouteImport.update({
   path: '/',
   getParentRoute: () => StreamingRoute,
 } as any)
+const StreamingAdminRoute = StreamingAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => StreamingRoute,
+} as any)
 const STokenRoute = STokenRouteImport.update({
   id: '/s/$token',
   path: '/s/$token',
@@ -66,6 +72,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRoute
   '/streaming': typeof StreamingRouteWithChildren
   '/s/$token': typeof STokenRoute
+  '/streaming/admin': typeof StreamingAdminRoute
   '/streaming/': typeof StreamingIndexRoute
   '/streaming/watch/$id': typeof StreamingWatchIdRoute
 }
@@ -75,6 +82,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/app': typeof AppRoute
   '/s/$token': typeof STokenRoute
+  '/streaming/admin': typeof StreamingAdminRoute
   '/streaming': typeof StreamingIndexRoute
   '/streaming/watch/$id': typeof StreamingWatchIdRoute
 }
@@ -86,6 +94,7 @@ export interface FileRoutesById {
   '/app': typeof AppRoute
   '/streaming': typeof StreamingRouteWithChildren
   '/s/$token': typeof STokenRoute
+  '/streaming/admin': typeof StreamingAdminRoute
   '/streaming/': typeof StreamingIndexRoute
   '/streaming/watch/$id': typeof StreamingWatchIdRoute
 }
@@ -98,6 +107,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/streaming'
     | '/s/$token'
+    | '/streaming/admin'
     | '/streaming/'
     | '/streaming/watch/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -107,6 +117,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/app'
     | '/s/$token'
+    | '/streaming/admin'
     | '/streaming'
     | '/streaming/watch/$id'
   id:
@@ -117,6 +128,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/streaming'
     | '/s/$token'
+    | '/streaming/admin'
     | '/streaming/'
     | '/streaming/watch/$id'
   fileRoutesById: FileRoutesById
@@ -174,6 +186,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StreamingIndexRouteImport
       parentRoute: typeof StreamingRoute
     }
+    '/streaming/admin': {
+      id: '/streaming/admin'
+      path: '/admin'
+      fullPath: '/streaming/admin'
+      preLoaderRoute: typeof StreamingAdminRouteImport
+      parentRoute: typeof StreamingRoute
+    }
     '/s/$token': {
       id: '/s/$token'
       path: '/s/$token'
@@ -192,11 +211,13 @@ declare module '@tanstack/react-router' {
 }
 
 interface StreamingRouteChildren {
+  StreamingAdminRoute: typeof StreamingAdminRoute
   StreamingIndexRoute: typeof StreamingIndexRoute
   StreamingWatchIdRoute: typeof StreamingWatchIdRoute
 }
 
 const StreamingRouteChildren: StreamingRouteChildren = {
+  StreamingAdminRoute: StreamingAdminRoute,
   StreamingIndexRoute: StreamingIndexRoute,
   StreamingWatchIdRoute: StreamingWatchIdRoute,
 }
