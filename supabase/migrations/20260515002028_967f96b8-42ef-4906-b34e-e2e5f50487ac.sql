@@ -1,0 +1,1 @@
+ALTER TABLE public.files ADD COLUMN IF NOT EXISTS poster_url text, ADD COLUMN IF NOT EXISTS description text;
