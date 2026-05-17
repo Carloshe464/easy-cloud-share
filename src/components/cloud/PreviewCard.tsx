@@ -35,11 +35,20 @@ export function PreviewCard({ file, onClose, onEditLink }: {
           </div>
         </div>
         {ext ? (
-          <a href={file.external_url!} target="_blank" rel="noopener noreferrer"
-            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition"
-            aria-label="Abrir em nova aba">
-            <ExternalLink className="w-5 h-5" />
-          </a>
+          <>
+            {onEditLink && (
+              <button onClick={() => onEditLink(file)}
+                className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition"
+                aria-label="Editar link">
+                <Pencil className="w-5 h-5" />
+              </button>
+            )}
+            <a href={file.external_url!} target="_blank" rel="noopener noreferrer"
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition"
+              aria-label="Abrir em nova aba">
+              <ExternalLink className="w-5 h-5" />
+            </a>
+          </>
         ) : url && (
           <a href={url} download={file.name} target="_blank" rel="noopener"
             className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition"
