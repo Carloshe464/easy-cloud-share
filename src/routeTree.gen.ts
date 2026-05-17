@@ -18,6 +18,8 @@ import { Route as StreamingIndexRouteImport } from './routes/streaming.index'
 import { Route as StreamingAdminRouteImport } from './routes/streaming.admin'
 import { Route as STokenRouteImport } from './routes/s.$token'
 import { Route as StreamingWatchIdRouteImport } from './routes/streaming.watch.$id'
+import { Route as ApiPublicStreamSegRouteImport } from './routes/api/public/stream.seg'
+import { Route as ApiPublicStreamPlayRouteImport } from './routes/api/public/stream.play'
 
 const StreamingRoute = StreamingRouteImport.update({
   id: '/streaming',
@@ -64,6 +66,16 @@ const StreamingWatchIdRoute = StreamingWatchIdRouteImport.update({
   path: '/watch/$id',
   getParentRoute: () => StreamingRoute,
 } as any)
+const ApiPublicStreamSegRoute = ApiPublicStreamSegRouteImport.update({
+  id: '/api/public/stream/seg',
+  path: '/api/public/stream/seg',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicStreamPlayRoute = ApiPublicStreamPlayRouteImport.update({
+  id: '/api/public/stream/play',
+  path: '/api/public/stream/play',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -75,6 +87,8 @@ export interface FileRoutesByFullPath {
   '/streaming/admin': typeof StreamingAdminRoute
   '/streaming/': typeof StreamingIndexRoute
   '/streaming/watch/$id': typeof StreamingWatchIdRoute
+  '/api/public/stream/play': typeof ApiPublicStreamPlayRoute
+  '/api/public/stream/seg': typeof ApiPublicStreamSegRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -85,6 +99,8 @@ export interface FileRoutesByTo {
   '/streaming/admin': typeof StreamingAdminRoute
   '/streaming': typeof StreamingIndexRoute
   '/streaming/watch/$id': typeof StreamingWatchIdRoute
+  '/api/public/stream/play': typeof ApiPublicStreamPlayRoute
+  '/api/public/stream/seg': typeof ApiPublicStreamSegRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -97,6 +113,8 @@ export interface FileRoutesById {
   '/streaming/admin': typeof StreamingAdminRoute
   '/streaming/': typeof StreamingIndexRoute
   '/streaming/watch/$id': typeof StreamingWatchIdRoute
+  '/api/public/stream/play': typeof ApiPublicStreamPlayRoute
+  '/api/public/stream/seg': typeof ApiPublicStreamSegRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -110,6 +128,8 @@ export interface FileRouteTypes {
     | '/streaming/admin'
     | '/streaming/'
     | '/streaming/watch/$id'
+    | '/api/public/stream/play'
+    | '/api/public/stream/seg'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -120,6 +140,8 @@ export interface FileRouteTypes {
     | '/streaming/admin'
     | '/streaming'
     | '/streaming/watch/$id'
+    | '/api/public/stream/play'
+    | '/api/public/stream/seg'
   id:
     | '__root__'
     | '/'
@@ -131,6 +153,8 @@ export interface FileRouteTypes {
     | '/streaming/admin'
     | '/streaming/'
     | '/streaming/watch/$id'
+    | '/api/public/stream/play'
+    | '/api/public/stream/seg'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -140,6 +164,8 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRoute
   StreamingRoute: typeof StreamingRouteWithChildren
   STokenRoute: typeof STokenRoute
+  ApiPublicStreamPlayRoute: typeof ApiPublicStreamPlayRoute
+  ApiPublicStreamSegRoute: typeof ApiPublicStreamSegRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -207,6 +233,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StreamingWatchIdRouteImport
       parentRoute: typeof StreamingRoute
     }
+    '/api/public/stream/seg': {
+      id: '/api/public/stream/seg'
+      path: '/api/public/stream/seg'
+      fullPath: '/api/public/stream/seg'
+      preLoaderRoute: typeof ApiPublicStreamSegRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/stream/play': {
+      id: '/api/public/stream/play'
+      path: '/api/public/stream/play'
+      fullPath: '/api/public/stream/play'
+      preLoaderRoute: typeof ApiPublicStreamPlayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -233,7 +273,19 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRoute,
   StreamingRoute: StreamingRouteWithChildren,
   STokenRoute: STokenRoute,
+  ApiPublicStreamPlayRoute: ApiPublicStreamPlayRoute,
+  ApiPublicStreamSegRoute: ApiPublicStreamSegRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
