@@ -3,12 +3,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Hls from "hls.js";
 import {
   ArrowLeft, Check, Heart, Maximize, Pause, Play, SkipForward,
-  Volume2, VolumeX, Loader2, Gauge, Subtitles, Settings,
+  Volume2, VolumeX, Loader2, Gauge, Subtitles, Settings, ExternalLink,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { detectExternalKind } from "@/components/cloud/types";
 import { getStoredUserId } from "@/lib/cloud";
 import { useFavorites, useHistory, useProgress, posterFor, fetchCatalog, type Title } from "@/lib/streaming";
+import { resolveStreamFn } from "@/lib/stream.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/streaming/watch/$id")({
