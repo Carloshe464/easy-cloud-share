@@ -202,6 +202,50 @@ async function writeCache(sourceUrl: string, r: ResolvedStream) {
   );
 }
 
+// --- ytdlp fallback ---------------------------------------------------------
+
+async function resolveViaYtdlp(sourceUrl: string): Promise<ResolvedStream | null> {
+  const base = process.env.YTDLP_SERVICE_URL;
+  const token = process.env.YTDLP_SERVICE_TOKEN;
+  if (!base) return null;
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 25_000); // yt-dlp can take a while
+  try {
+    const res = await fetch(`${base.replace(/\/$/, "")}/resolve`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ url: sourceUrl }),
+      signal: ctrl.signal,
+    });
+    if (!res.ok) {
+      console.warn("[resolveStream] ytdlp service", res.status, await res.text().catch(() => ""));
+      return null;
+    }
+    const j = (await res.json()) as {
+      streamUrl?: string;
+      kind?: "hls" | "mp4";
+      headers?: Record<string, string>;
+      expiresAt?: number;
+    };
+    if (!j.streamUrl || !j.kind) return null;
+    return {
+      streamUrl: j.streamUrl,
+      kind: j.kind,
+      headers: j.headers ?? {},
+      resolver: "ytdlp",
+      expiresAt: j.expiresAt ?? Date.now() + 30 * 60 * 1000,
+    };
+  } catch (err) {
+    console.warn("[resolveStream] ytdlp fallback error", err);
+    return null;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 // --- public API -------------------------------------------------------------
 
 export async function resolveStream(sourceUrl: string): Promise<ResolvedStream | null> {
@@ -211,15 +255,25 @@ export async function resolveStream(sourceUrl: string): Promise<ResolvedStream |
   const cached = await readCache(sourceUrl);
   if (cached) return cached;
 
+  // Tier 1: worker-side regex/unpack extractors
   const extractor = pickExtractor(sourceUrl);
   try {
     const r = await extractor(sourceUrl);
     if (r) {
-      await writeCache(sourceUrl, r).catch(() => { /* cache best-effort */ });
+      await writeCache(sourceUrl, r).catch(() => { /* best-effort */ });
       return r;
     }
   } catch (err) {
-    console.error("[resolveStream] extractor failed", sourceUrl, err);
+    console.warn("[resolveStream] worker extractor failed", sourceUrl, err);
   }
+
+  // Tier 2: yt-dlp microservice fallback
+  const fallback = await resolveViaYtdlp(sourceUrl);
+  if (fallback) {
+    await writeCache(sourceUrl, fallback).catch(() => { /* best-effort */ });
+    return fallback;
+  }
+
   return null;
 }
+
