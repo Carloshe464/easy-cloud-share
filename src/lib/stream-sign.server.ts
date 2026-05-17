@@ -29,10 +29,16 @@ async function hmacKey(): Promise<CryptoKey> {
   );
 }
 
+function toAB(u8: Uint8Array): ArrayBuffer {
+  const ab = new ArrayBuffer(u8.byteLength);
+  new Uint8Array(ab).set(u8);
+  return ab;
+}
+
 export async function signStreamToken(payload: Payload): Promise<string> {
   const json = new TextEncoder().encode(JSON.stringify(payload));
   const key = await hmacKey();
-  const sig = await crypto.subtle.sign("HMAC", key, json);
+  const sig = await crypto.subtle.sign("HMAC", key, toAB(json));
   return `${b64u(json)}.${b64u(sig)}`;
 }
 
@@ -43,7 +49,7 @@ export async function verifyStreamToken(token: string): Promise<Payload | null> 
     const json = unb64u(pB64);
     const sig = unb64u(sB64);
     const key = await hmacKey();
-    const ok = await crypto.subtle.verify("HMAC", key, sig, json);
+    const ok = await crypto.subtle.verify("HMAC", key, toAB(sig), toAB(json));
     if (!ok) return null;
     const p = JSON.parse(new TextDecoder().decode(json)) as Payload;
     if (typeof p.e !== "number" || p.e < Date.now()) return null;
