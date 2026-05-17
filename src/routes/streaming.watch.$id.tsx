@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
 import {
   ArrowLeft, Check, Heart, Maximize, Pause, Play, SkipForward,
