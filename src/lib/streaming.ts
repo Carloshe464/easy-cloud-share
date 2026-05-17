@@ -26,16 +26,28 @@ export async function fetchCatalog(userId: string): Promise<{
   folders: FolderRow[];
   titles: Title[];
 }> {
-  const [{ data: folders }, { data: files }] = await Promise.all([
-    supabase.from("folders").select("*").eq("user_id", userId).order("created_at", { ascending: true }),
-    supabase.from("files").select("*").eq("user_id", userId).not("external_url", "is", null).order("created_at", { ascending: false }),
-  ]);
-  const fmap = new Map((folders ?? []).map((f) => [f.id, f.name]));
-  const titles = ((files ?? []) as FileRow[]).map((f) => ({
+  // Public catalog = items any user has shared via "Publicar no Play"
+  // PLUS items owned by the current user (so own items show even if not public yet — useful for admin/seeded demos)
+  const { data: files } = await supabase
+    .from("files")
+    .select("*")
+    .not("external_url", "is", null)
+    .or(`is_public.eq.true,user_id.eq.${userId}`)
+    .order("created_at", { ascending: false });
+
+  const fileRows = (files ?? []) as FileRow[];
+  const folderIds = Array.from(new Set(fileRows.map((f) => f.folder_id).filter((x): x is string => !!x)));
+  let folders: FolderRow[] = [];
+  if (folderIds.length) {
+    const { data } = await supabase.from("folders").select("*").in("id", folderIds);
+    folders = (data ?? []) as FolderRow[];
+  }
+  const fmap = new Map(folders.map((f) => [f.id, f.name]));
+  const titles: Title[] = fileRows.map((f) => ({
     ...f,
     category: f.folder_id ? fmap.get(f.folder_id) ?? null : null,
   }));
-  return { folders: (folders ?? []) as FolderRow[], titles };
+  return { folders, titles };
 }
 
 // localStorage state ----------------------------------------------------------
