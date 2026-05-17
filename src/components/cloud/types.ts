@@ -10,6 +10,8 @@ export type FileRow = {
   external_url?: string | null;
   poster_url?: string | null;
   description?: string | null;
+  is_public?: boolean | null;
+  user_id?: string;
 };
 
 export type ItemKind = "file" | "folder";
