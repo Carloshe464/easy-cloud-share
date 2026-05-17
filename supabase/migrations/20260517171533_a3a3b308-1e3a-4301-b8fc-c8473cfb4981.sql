@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "stream_cache write authenticated" ON public.stream_cache;
