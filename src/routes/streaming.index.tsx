@@ -51,15 +51,21 @@ function StreamingHome() {
     [fav.ids, titles],
   );
   const trending = useMemo(() => [...filtered].sort(() => Math.random() - 0.5).slice(0, 10), [filtered]);
+  const indicados = useMemo(
+    () => filtered.filter((t) => t.is_public && t.user_id && t.user_id !== userId),
+    [filtered, userId],
+  );
   const byCategory = useMemo(() => {
     const map = new Map<string, Title[]>();
+    // Only own items here — items from others live in "Indicados da galera"
     for (const t of filtered) {
+      if (t.user_id && t.user_id !== userId) continue;
       const k = t.category ?? "Sem categoria";
       if (!map.has(k)) map.set(k, []);
       map.get(k)!.push(t);
     }
     return Array.from(map.entries());
-  }, [filtered]);
+  }, [filtered, userId]);
 
   if (!userId) return null;
 
@@ -102,6 +108,7 @@ function StreamingHome() {
         {continueWatching.length > 0 && <Row title="Continuar assistindo" items={continueWatching} progressMap={prog.map} />}
         {favorites.length > 0 && <Row title="Minha lista" items={favorites} />}
         {!q && <Row title="Em alta" items={trending} />}
+        {indicados.length > 0 && <Row title="Indicados da galera" items={indicados} showCategory />}
         {byCategory.map(([cat, items]) => (
           <Row key={cat} title={cat} items={items} />
         ))}
@@ -144,7 +151,7 @@ function Hero({ title, fav }: { title: Title; fav: ReturnType<typeof useFavorite
   );
 }
 
-function Row({ title, items, progressMap }: { title: string; items: Title[]; progressMap?: Record<string, { t: number; d: number }> }) {
+function Row({ title, items, progressMap, showCategory }: { title: string; items: Title[]; progressMap?: Record<string, { t: number; d: number }>; showCategory?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const [hovered, setHovered] = useState<string | null>(null);
   const scroll = (dir: 1 | -1) => {
@@ -172,6 +179,9 @@ function Row({ title, items, progressMap }: { title: string; items: Title[]; pro
                 <img src={posterFor(t)} alt={t.name} loading="lazy"
                   className="w-full h-full object-cover" />
                 <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/90 to-transparent">
+                  {showCategory && t.category && (
+                    <div className="text-[10px] uppercase tracking-wider text-primary font-bold mb-0.5 line-clamp-1">{t.category}</div>
+                  )}
                   <div className="text-xs font-semibold line-clamp-2">{t.name}</div>
                 </div>
                 {pct > 0 && (
