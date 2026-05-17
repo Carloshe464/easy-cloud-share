@@ -140,6 +140,39 @@ export type Database = {
           },
         ]
       }
+      stream_cache: {
+        Row: {
+          created_at: string
+          expires_at: string
+          headers: Json
+          id: string
+          kind: string
+          resolved_url: string
+          resolver: string
+          source_url: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          headers?: Json
+          id?: string
+          kind: string
+          resolved_url: string
+          resolver?: string
+          source_url: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          headers?: Json
+          id?: string
+          kind?: string
+          resolved_url?: string
+          resolver?: string
+          source_url?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           activated_at: string | null
