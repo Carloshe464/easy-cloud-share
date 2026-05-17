@@ -151,7 +151,7 @@ function Hero({ title, fav }: { title: Title; fav: ReturnType<typeof useFavorite
   );
 }
 
-function Row({ title, items, progressMap }: { title: string; items: Title[]; progressMap?: Record<string, { t: number; d: number }> }) {
+function Row({ title, items, progressMap, showCategory }: { title: string; items: Title[]; progressMap?: Record<string, { t: number; d: number }>; showCategory?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const [hovered, setHovered] = useState<string | null>(null);
   const scroll = (dir: 1 | -1) => {
