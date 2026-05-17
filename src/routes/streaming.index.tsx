@@ -179,6 +179,9 @@ function Row({ title, items, progressMap, showCategory }: { title: string; items
                 <img src={posterFor(t)} alt={t.name} loading="lazy"
                   className="w-full h-full object-cover" />
                 <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/90 to-transparent">
+                  {showCategory && t.category && (
+                    <div className="text-[10px] uppercase tracking-wider text-primary font-bold mb-0.5 line-clamp-1">{t.category}</div>
+                  )}
                   <div className="text-xs font-semibold line-clamp-2">{t.name}</div>
                 </div>
                 {pct > 0 && (
