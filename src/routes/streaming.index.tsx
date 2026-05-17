@@ -108,6 +108,7 @@ function StreamingHome() {
         {continueWatching.length > 0 && <Row title="Continuar assistindo" items={continueWatching} progressMap={prog.map} />}
         {favorites.length > 0 && <Row title="Minha lista" items={favorites} />}
         {!q && <Row title="Em alta" items={trending} />}
+        {indicados.length > 0 && <Row title="Indicados da galera" items={indicados} showCategory />}
         {byCategory.map(([cat, items]) => (
           <Row key={cat} title={cat} items={items} />
         ))}
