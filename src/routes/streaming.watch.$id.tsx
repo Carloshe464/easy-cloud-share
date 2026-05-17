@@ -199,20 +199,81 @@ function PlayerSurface({ url, name, initial, onProgress, onEnded }: {
   onEnded: () => void;
 }) {
   const ext = detectExternalKind(url);
-  const isHls = url.toLowerCase().includes(".m3u8");
-  const isMp4 = ext?.kind === "video" && !isHls;
-  const isEmbed = !isHls && !isMp4;
+  const isDirectHls = url.toLowerCase().includes(".m3u8");
+  const isDirectMp4 = ext?.kind === "video" && !isDirectHls;
+  const isEmbed = !isDirectHls && !isDirectMp4;
 
-  if (isEmbed && ext) {
+  // For embeds, attempt server-side resolution to a direct stream.
+  const [resolveState, setResolveState] = useState<
+    | { phase: "idle" }
+    | { phase: "loading" }
+    | { phase: "ok"; streamUrl: string; kind: "hls" | "mp4" }
+    | { phase: "fail" }
+  >({ phase: isEmbed ? "loading" : "idle" });
+
+  useEffect(() => {
+    if (!isEmbed) { setResolveState({ phase: "idle" }); return; }
+    let cancelled = false;
+    setResolveState({ phase: "loading" });
+    resolveStreamFn({ data: { url } })
+      .then((r) => {
+        if (cancelled) return;
+        if (r.ok) setResolveState({ phase: "ok", streamUrl: r.streamUrl, kind: r.kind });
+        else setResolveState({ phase: "fail" });
+      })
+      .catch(() => { if (!cancelled) setResolveState({ phase: "fail" }); });
+    return () => { cancelled = true; };
+  }, [url, isEmbed]);
+
+  if (isDirectHls || isDirectMp4) {
+    return <NativePlayer url={url} initial={initial} onProgress={onProgress} onEnded={onEnded} hls={isDirectHls} />;
+  }
+
+  if (resolveState.phase === "loading") {
     return (
-      <div className="relative aspect-video rounded-xl overflow-hidden ring-1 ring-border bg-black shadow-[0_24px_60px_-20px_rgba(0,0,0,0.85)]">
-        <iframe src={ext.src} title={name} allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-          allowFullScreen className="absolute inset-0 w-full h-full" />
+      <div className="relative aspect-video rounded-xl overflow-hidden ring-1 ring-border bg-black flex items-center justify-center shadow-[0_24px_60px_-20px_rgba(0,0,0,0.85)]">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-sm">Preparando reprodução…</p>
+        </div>
       </div>
     );
   }
 
-  return <NativePlayer url={url} initial={initial} onProgress={onProgress} onEnded={onEnded} hls={isHls} />;
+  if (resolveState.phase === "ok") {
+    return (
+      <NativePlayer
+        url={resolveState.streamUrl}
+        initial={initial}
+        onProgress={onProgress}
+        onEnded={onEnded}
+        hls={resolveState.kind === "hls"}
+      />
+    );
+  }
+
+  // Fallback: iframe + "Abrir no site original" escape hatch.
+  if (ext) {
+    return (
+      <div className="relative aspect-video rounded-xl overflow-hidden ring-1 ring-border bg-black shadow-[0_24px_60px_-20px_rgba(0,0,0,0.85)]">
+        <iframe src={ext.src} title={name} allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+          allowFullScreen className="absolute inset-0 w-full h-full" />
+        <a href={url} target="_blank" rel="noopener noreferrer"
+          className="absolute top-3 right-3 inline-flex items-center gap-1.5 bg-black/70 hover:bg-black/90 backdrop-blur text-foreground text-xs font-medium px-3 py-1.5 rounded-full ring-1 ring-white/15 transition">
+          <ExternalLink className="w-3.5 h-3.5" /> Abrir no site original
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <div className="aspect-video rounded-xl ring-1 ring-border bg-black flex items-center justify-center">
+      <a href={url} target="_blank" rel="noopener noreferrer"
+        className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-5 py-3 rounded-full font-semibold">
+        <ExternalLink className="w-4 h-4" /> Abrir link
+      </a>
+    </div>
+  );
 }
 
 function NativePlayer({ url, initial, onProgress, onEnded, hls: useHls }: {
