@@ -45,6 +45,7 @@ export type Database = {
           external_url: string | null
           folder_id: string | null
           id: string
+          is_public: boolean
           mime_type: string | null
           name: string
           poster_url: string | null
@@ -59,6 +60,7 @@ export type Database = {
           external_url?: string | null
           folder_id?: string | null
           id?: string
+          is_public?: boolean
           mime_type?: string | null
           name: string
           poster_url?: string | null
@@ -73,6 +75,7 @@ export type Database = {
           external_url?: string | null
           folder_id?: string | null
           id?: string
+          is_public?: boolean
           mime_type?: string | null
           name?: string
           poster_url?: string | null

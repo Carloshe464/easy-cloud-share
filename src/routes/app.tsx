@@ -266,6 +266,16 @@ function AppPage() {
     }
   };
 
+  const togglePublicSelected = async () => {
+    if (selectedFiles.length === 0) { toast.message("Selecione arquivos para publicar"); return; }
+    const allPublic = selectedFiles.every((f) => !!f.is_public);
+    const next = !allPublic;
+    const ids = selectedFiles.map((f) => f.id);
+    const { error } = await supabase.from("files").update({ is_public: next }).in("id", ids);
+    if (error) toast.error(error.message);
+    else { toast.success(next ? "Publicado no Play" : "Removido do Play"); refresh(); }
+  };
+
   // ---------- drag & drop (move) ----------
   const beginInternalDrag = (e: React.DragEvent, k: SelectionKey) => {
     // if dragged item not selected, drag just it; else drag whole selection
@@ -603,12 +613,15 @@ function AppPage() {
         count={sel.count}
         canRename={selectedFiles.length + selectedFolders.length === 1}
         canRemoveFromFolder={!!currentFolder && sel.count > 0}
+        canTogglePublic={selectedFiles.length > 0}
+        allPublic={selectedFiles.length > 0 && selectedFiles.every((f) => !!f.is_public)}
         onClear={() => sel.clear()}
         onDownload={downloadSelected}
         onShare={shareSelected}
         onCopyLink={copyShareLinks}
         onRename={renameSelected}
         onRemoveFromFolder={() => moveItemsToFolder(Array.from(sel.selected), null)}
+        onTogglePublic={togglePublicSelected}
         onDelete={deleteSelected}
       />
 

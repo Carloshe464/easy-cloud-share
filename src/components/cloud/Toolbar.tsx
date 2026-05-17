@@ -1,21 +1,24 @@
-import { Download, FolderMinus, Link2, Pencil, Share2, Trash2, X } from "lucide-react";
+import { Download, FolderMinus, Globe, Link2, Lock, Pencil, Share2, Trash2, X } from "lucide-react";
 
 type Props = {
   count: number;
   canRename: boolean;
   canRemoveFromFolder?: boolean;
+  canTogglePublic?: boolean;
+  allPublic?: boolean;
   onClear: () => void;
   onDownload: () => void;
   onShare: () => void;
   onCopyLink: () => void;
   onRename: () => void;
   onRemoveFromFolder?: () => void;
+  onTogglePublic?: () => void;
   onDelete: () => void;
 };
 
 export function Toolbar({
-  count, canRename, canRemoveFromFolder, onClear, onDownload, onShare, onCopyLink,
-  onRename, onRemoveFromFolder, onDelete,
+  count, canRename, canRemoveFromFolder, canTogglePublic, allPublic, onClear, onDownload, onShare, onCopyLink,
+  onRename, onRemoveFromFolder, onTogglePublic, onDelete,
 }: Props) {
   if (count === 0) return null;
   return (
@@ -39,6 +42,13 @@ export function Toolbar({
           {canRename && <Action icon={Pencil} label="Renomear" onClick={onRename} />}
           {canRemoveFromFolder && onRemoveFromFolder && (
             <Action icon={FolderMinus} label="Tirar da pasta" onClick={onRemoveFromFolder} />
+          )}
+          {canTogglePublic && onTogglePublic && (
+            <Action
+              icon={allPublic ? Lock : Globe}
+              label={allPublic ? "Tornar privado" : "Publicar no Play"}
+              onClick={onTogglePublic}
+            />
           )}
           <Action icon={Trash2} label="Excluir" onClick={onDelete} danger />
         </div>
