@@ -1,19 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link as LinkIcon, X } from "lucide-react";
+import { Link as LinkIcon, Pencil, X } from "lucide-react";
 import { detectExternalKind } from "./types";
 
+export type ExternalLinkInitial = { url: string; name: string };
+
 export function ExternalLinkViewer({
-  onClose, onSave,
+  onClose, onSave, initial, mode = "create",
 }: {
   onClose: () => void;
   onSave: (input: { url: string; name: string }) => Promise<void> | void;
+  initial?: ExternalLinkInitial | null;
+  mode?: "create" | "edit";
 }) {
-  const [url, setUrl] = useState("");
-  const [name, setName] = useState("");
+  const [url, setUrl] = useState(initial?.url ?? "");
+  const [name, setName] = useState(initial?.name ?? "");
   const [saving, setSaving] = useState(false);
 
   const detected = useMemo(() => (url ? detectExternalKind(url) : null), [url]);
   const valid = !!detected;
+  const isEdit = mode === "edit";
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -21,15 +26,15 @@ export function ExternalLinkViewer({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // Suggest name from URL
+  // Suggest name from URL (only when creating, and only if name is empty)
   useEffect(() => {
-    if (!detected || name) return;
+    if (isEdit || !detected || name) return;
     try {
       const u = new URL(url);
       const last = u.pathname.split("/").filter(Boolean).pop();
       setName(last ? decodeURIComponent(last) : u.hostname.replace(/^www\./, ""));
     } catch { /* noop */ }
-  }, [detected, url, name]);
+  }, [detected, url, name, isEdit]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,8 +55,12 @@ export function ExternalLinkViewer({
         className="bg-card ring-1 ring-border rounded-2xl w-full max-w-lg p-6 shadow-2xl"
       >
         <div className="flex items-center gap-3 mb-5">
-          <LinkIcon className="w-5 h-5 text-primary" strokeWidth={1.5} />
-          <h2 className="font-display text-lg font-semibold flex-1">Adicionar link</h2>
+          {isEdit
+            ? <Pencil className="w-5 h-5 text-primary" strokeWidth={1.5} />
+            : <LinkIcon className="w-5 h-5 text-primary" strokeWidth={1.5} />}
+          <h2 className="font-display text-lg font-semibold flex-1">
+            {isEdit ? "Editar link" : "Adicionar link"}
+          </h2>
           <button type="button" onClick={onClose}
             className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary"
             aria-label="Fechar">
@@ -88,7 +97,7 @@ export function ExternalLinkViewer({
           </button>
           <button type="submit" disabled={!valid || saving}
             className="px-4 py-2 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 transition">
-            {saving ? "Salvando…" : "Salvar"}
+            {saving ? "Salvando…" : isEdit ? "Salvar alterações" : "Salvar"}
           </button>
         </div>
       </form>
