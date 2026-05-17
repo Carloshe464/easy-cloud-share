@@ -42,6 +42,7 @@ function AppPage() {
   const [dropTarget, setDropTarget] = useState<string | null>(null); // folder id
   const [externalDrag, setExternalDrag] = useState(false);
   const [linkViewerOpen, setLinkViewerOpen] = useState(false);
+  const [editingLink, setEditingLink] = useState<FileRow | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const refreshRunRef = useRef(0);
 
