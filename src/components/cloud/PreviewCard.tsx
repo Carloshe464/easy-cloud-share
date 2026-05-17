@@ -1,11 +1,15 @@
-import { Download, ExternalLink, FileIcon, Link2, X } from "lucide-react";
+import { Download, ExternalLink, FileIcon, Link2, Pencil, X } from "lucide-react";
 import { formatBytes, publicUrl } from "@/lib/cloud";
 import {
   detectExternalKind, isAudio, isExternalLink, isImage, isVideo, type FileRow,
 } from "./types";
 import { useEffect } from "react";
 
-export function PreviewCard({ file, onClose }: { file: FileRow; onClose: () => void }) {
+export function PreviewCard({ file, onClose, onEditLink }: {
+  file: FileRow;
+  onClose: () => void;
+  onEditLink?: (file: FileRow) => void;
+}) {
   const ext = isExternalLink(file) && file.external_url ? detectExternalKind(file.external_url) : null;
   const url = !ext && file.storage_path ? publicUrl(file.storage_path) : "";
   const img = !ext && isImage(file.mime_type, file.name);
@@ -31,11 +35,20 @@ export function PreviewCard({ file, onClose }: { file: FileRow; onClose: () => v
           </div>
         </div>
         {ext ? (
-          <a href={file.external_url!} target="_blank" rel="noopener noreferrer"
-            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition"
-            aria-label="Abrir em nova aba">
-            <ExternalLink className="w-5 h-5" />
-          </a>
+          <>
+            {onEditLink && (
+              <button onClick={() => onEditLink(file)}
+                className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition"
+                aria-label="Editar link">
+                <Pencil className="w-5 h-5" />
+              </button>
+            )}
+            <a href={file.external_url!} target="_blank" rel="noopener noreferrer"
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition"
+              aria-label="Abrir em nova aba">
+              <ExternalLink className="w-5 h-5" />
+            </a>
+          </>
         ) : url && (
           <a href={url} download={file.name} target="_blank" rel="noopener"
             className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition"

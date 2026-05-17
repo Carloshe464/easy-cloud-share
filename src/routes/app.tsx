@@ -42,6 +42,7 @@ function AppPage() {
   const [dropTarget, setDropTarget] = useState<string | null>(null); // folder id
   const [externalDrag, setExternalDrag] = useState(false);
   const [linkViewerOpen, setLinkViewerOpen] = useState(false);
+  const [editingLink, setEditingLink] = useState<FileRow | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const refreshRunRef = useRef(0);
 
@@ -627,23 +628,39 @@ function AppPage() {
 
       <DragLayer active={externalDrag} label="Solte para enviar à pasta atual" />
 
-      {selectedFile && <PreviewCard file={selectedFile} onClose={() => setSelectedFile(null)} />}
-      {linkViewerOpen && (
+      {selectedFile && (
+        <PreviewCard
+          file={selectedFile}
+          onClose={() => setSelectedFile(null)}
+          onEditLink={(f) => { setEditingLink(f); setSelectedFile(null); }}
+        />
+      )}
+      {(linkViewerOpen || editingLink) && (
         <ExternalLinkViewer
-          onClose={() => setLinkViewerOpen(false)}
+          mode={editingLink ? "edit" : "create"}
+          initial={editingLink ? { url: editingLink.external_url ?? "", name: editingLink.name } : null}
+          onClose={() => { setLinkViewerOpen(false); setEditingLink(null); }}
           onSave={async ({ url, name }) => {
             if (!user) return;
-            const { error } = await supabase.from("files").insert({
-              user_id: user.id,
-              folder_id: currentFolder?.id ?? null,
-              name,
-              storage_path: null,
-              external_url: url,
-              size_bytes: 0,
-              mime_type: "application/x-external-link",
-            });
-            if (error) toast.error(error.message);
-            else { toast.success("Link adicionado"); refresh(); }
+            if (editingLink) {
+              const { error } = await supabase.from("files")
+                .update({ external_url: url, name })
+                .eq("id", editingLink.id);
+              if (error) toast.error(error.message);
+              else { toast.success("Link atualizado"); refresh(); }
+            } else {
+              const { error } = await supabase.from("files").insert({
+                user_id: user.id,
+                folder_id: currentFolder?.id ?? null,
+                name,
+                storage_path: null,
+                external_url: url,
+                size_bytes: 0,
+                mime_type: "application/x-external-link",
+              });
+              if (error) toast.error(error.message);
+              else { toast.success("Link adicionado"); refresh(); }
+            }
           }}
         />
       )}
