@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { resolveStream } from "./stream-resolver.server";
+import { signStreamToken, PLAY_TTL_MS } from "./stream-sign.server";
 
 const Input = z.object({
   url: z.string().url().max(2048),
@@ -11,13 +12,32 @@ export const resolveStreamFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const r = await resolveStream(data.url);
     if (!r) return { ok: false as const, reason: "unresolved" as const };
-    // Don't leak headers to client — only kind + a play URL.
-    // In Etapa 2 we replace streamUrl with a signed proxy URL.
+
+    // Passthrough direct urls don't need proxy — return as-is.
+    if (r.resolver === "passthrough" && Object.keys(r.headers).length === 0) {
+      return {
+        ok: true as const,
+        kind: r.kind,
+        streamUrl: r.streamUrl,
+        proxied: false as const,
+        expiresAt: r.expiresAt,
+        resolver: r.resolver,
+      };
+    }
+
+    const token = await signStreamToken({
+      u: r.streamUrl,
+      h: r.headers,
+      e: Date.now() + PLAY_TTL_MS,
+    });
+    const proxyUrl = `/api/public/stream/play?t=${encodeURIComponent(token)}`;
+
     return {
       ok: true as const,
       kind: r.kind,
-      streamUrl: r.streamUrl,
-      expiresAt: r.expiresAt,
+      streamUrl: proxyUrl,
+      proxied: true as const,
+      expiresAt: Date.now() + PLAY_TTL_MS,
       resolver: r.resolver,
     };
   });
