@@ -166,6 +166,7 @@ export async function seedDemoCatalog(userId: string): Promise<number> {
         description: it.description,
         mime_type: EXTERNAL_LINK_MIME,
         size_bytes: 0,
+        is_public: true,
       });
       count++;
     }
