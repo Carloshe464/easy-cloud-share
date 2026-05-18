@@ -252,8 +252,12 @@ function PlayerSurface({ url, name, initial, onProgress, onEnded }: {
     );
   }
 
-  // Fallback: iframe + "Abrir no site original" escape hatch.
-  if (ext) {
+  // Fallback: known iframe-friendly providers keep the iframe; everything else
+  // (pirate hosts that block X-Frame / show "conexão recusada") gets a clean
+  // escape-hatch screen with the original link instead of a broken iframe.
+  const iframeFriendly = ext?.kind === "youtube" || ext?.kind === "vimeo";
+
+  if (ext && iframeFriendly) {
     return (
       <div className="relative aspect-video rounded-xl overflow-hidden ring-1 ring-border bg-black shadow-[0_24px_60px_-20px_rgba(0,0,0,0.85)]">
         <iframe src={ext.src} title={name} allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
@@ -266,12 +270,25 @@ function PlayerSurface({ url, name, initial, onProgress, onEnded }: {
     );
   }
 
+  let host = "";
+  try { host = new URL(url).hostname.replace(/^www\./, ""); } catch { /* noop */ }
+
   return (
-    <div className="aspect-video rounded-xl ring-1 ring-border bg-black flex items-center justify-center">
-      <a href={url} target="_blank" rel="noopener noreferrer"
-        className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-5 py-3 rounded-full font-semibold">
-        <ExternalLink className="w-4 h-4" /> Abrir link
-      </a>
+    <div className="relative aspect-video rounded-xl overflow-hidden ring-1 ring-border bg-gradient-to-br from-card via-background to-card flex items-center justify-center shadow-[0_24px_60px_-20px_rgba(0,0,0,0.85)]">
+      <div className="text-center px-6 max-w-md">
+        <div className="mx-auto w-14 h-14 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mb-4 ring-1 ring-destructive/30">
+          <ExternalLink className="w-6 h-6" />
+        </div>
+        <h3 className="font-display text-xl mb-2">Reprodução indisponível aqui</h3>
+        <p className="text-sm text-muted-foreground mb-5">
+          {host ? <>O provedor <strong className="text-foreground/80">{host}</strong> bloqueia a reprodução fora do site original.</> : "Este link não permite reprodução embutida."}
+          {" "}Abra na origem para assistir.
+        </p>
+        <a href={url} target="_blank" rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-full font-semibold hover:opacity-90 transition">
+          <ExternalLink className="w-4 h-4" /> Abrir no site original
+        </a>
+      </div>
     </div>
   );
 }
