@@ -52,20 +52,18 @@ function StreamingHome() {
   );
   const trending = useMemo(() => [...filtered].sort(() => Math.random() - 0.5).slice(0, 10), [filtered]);
   const indicados = useMemo(
-    () => filtered.filter((t) => t.is_public && t.user_id && t.user_id !== userId),
-    [filtered, userId],
+    () => filtered.filter((t) => t.is_public),
+    [filtered],
   );
   const byCategory = useMemo(() => {
     const map = new Map<string, Title[]>();
-    // Only own items here — items from others live in "Indicados da galera"
     for (const t of filtered) {
-      if (t.user_id && t.user_id !== userId) continue;
       const k = t.category ?? "Sem categoria";
       if (!map.has(k)) map.set(k, []);
       map.get(k)!.push(t);
     }
     return Array.from(map.entries());
-  }, [filtered, userId]);
+  }, [filtered]);
 
   if (!userId) return null;
 

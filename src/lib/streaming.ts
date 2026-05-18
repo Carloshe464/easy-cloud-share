@@ -139,6 +139,10 @@ export const SAMPLE_CATALOG: Array<{ category: string; items: Array<{ name: stri
   },
 ];
 
+export function allDemoUrls(): string[] {
+  return SAMPLE_CATALOG.flatMap((c) => c.items.map((i) => i.url));
+}
+
 export async function seedDemoCatalog(userId: string): Promise<number> {
   let count = 0;
   for (const cat of SAMPLE_CATALOG) {
@@ -172,4 +176,26 @@ export async function seedDemoCatalog(userId: string): Promise<number> {
     }
   }
   return count;
+}
+
+export async function removeDemoCatalog(userId: string): Promise<number> {
+  const urls = allDemoUrls();
+  const { data: rows } = await supabase
+    .from("files")
+    .select("id, folder_id")
+    .eq("user_id", userId)
+    .in("external_url", urls);
+  if (!rows || rows.length === 0) return 0;
+  const ids = rows.map((r) => r.id);
+  await supabase.from("files").delete().in("id", ids);
+
+  // Cleanup empty demo folders
+  const demoCats = SAMPLE_CATALOG.map((c) => c.category);
+  const { data: demoFolders } = await supabase
+    .from("folders").select("id, name").eq("user_id", userId).in("name", demoCats);
+  for (const f of demoFolders ?? []) {
+    const { count } = await supabase.from("files").select("id", { count: "exact", head: true }).eq("folder_id", f.id);
+    if (!count) await supabase.from("folders").delete().eq("id", f.id);
+  }
+  return ids.length;
 }
