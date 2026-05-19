@@ -72,10 +72,13 @@ export function PreviewCard({ file, onClose, onEditLink }: {
             <video src={ext.src} controls autoPlay className="max-w-full max-h-full rounded-lg" />
           ) : ext.kind === "audio" ? (
             <audio src={ext.src} controls autoPlay className="w-full max-w-xl" />
-          ) : (
+          ) : ext.kind === "youtube" || ext.kind === "vimeo" ? (
             <iframe src={ext.src} title={file.name} className="w-full h-full rounded-lg bg-card"
               allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen />
+          ) : (
+            <ResolvedEmbed url={file.external_url!} name={file.name} fallbackSrc={ext.src} />
           )
+
         ) : img ? (
           <img src={url} alt={file.name} className="max-w-full max-h-full object-contain rounded-lg" />
         ) : vid ? (
