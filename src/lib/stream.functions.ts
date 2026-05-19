@@ -13,6 +13,20 @@ export const resolveStreamFn = createServerFn({ method: "POST" })
     const r = await resolveStream(data.url);
     if (!r) return { ok: false as const, reason: "unresolved" as const };
 
+    // Ytdlp resolver (Terabox/Hefesto): retorna direto sem proxy.
+    // O CDN do Terabox aceita requisições diretas do browser sem Referer
+    // quando a URL já está assinada com token temporário.
+    if (r.resolver === "ytdlp") {
+      return {
+        ok: true as const,
+        kind: r.kind,
+        streamUrl: r.streamUrl,
+        proxied: false as const,
+        expiresAt: r.expiresAt,
+        resolver: r.resolver,
+      };
+    }
+
     // Passthrough direct urls don't need proxy — return as-is.
     if (r.resolver === "passthrough" && Object.keys(r.headers).length === 0) {
       return {
@@ -31,7 +45,6 @@ export const resolveStreamFn = createServerFn({ method: "POST" })
       e: Date.now() + PLAY_TTL_MS,
     });
     const proxyUrl = `/api/public/stream/play?t=${encodeURIComponent(token)}`;
-
     return {
       ok: true as const,
       kind: r.kind,
