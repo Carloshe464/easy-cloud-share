@@ -162,6 +162,7 @@ function pickExtractor(url: string): Extractor {
   if (/filemoon|moonplayer|filelions|kerapoxy/.test(host)) return extractors.filemoon;
   if (/mixdrop/.test(host)) return extractors.mixdrop;
   if (/doodstream|dood\.(?:to|so|la|li|wf|pm|re|sh|yt|cx|stream|watch)/.test(host)) return extractors.doodstream;
+  if (/terabox|freeterabox|videynow|1024tera|4funbox|mirrobox|nephobox|momerybox|teraboxapp/.test(host)) return extractors.terabox;
   return extractors.generic;
 }
 
