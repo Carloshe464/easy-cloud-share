@@ -1,9 +1,11 @@
-import { Download, ExternalLink, FileIcon, Link2, Pencil, X } from "lucide-react";
+import { Download, ExternalLink, FileIcon, Link2, Loader2, Pencil, X } from "lucide-react";
 import { formatBytes, publicUrl } from "@/lib/cloud";
 import {
   detectExternalKind, isAudio, isExternalLink, isImage, isVideo, type FileRow,
 } from "./types";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import Hls from "hls.js";
+import { resolveStreamFn } from "@/lib/stream.functions";
 
 export function PreviewCard({ file, onClose, onEditLink }: {
   file: FileRow;
