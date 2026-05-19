@@ -205,13 +205,18 @@ async function writeCache(sourceUrl: string, r: ResolvedStream) {
 // --- ytdlp fallback ---------------------------------------------------------
 
 async function resolveViaYtdlp(sourceUrl: string): Promise<ResolvedStream | null> {
-  const base = process.env.YTDLP_SERVICE_URL;
-  const token = process.env.YTDLP_SERVICE_TOKEN;
-  if (!base) return null;
+  const base = process.env.YTDLP_SERVICE_URL?.trim();
+  const token = process.env.YTDLP_SERVICE_TOKEN?.trim();
+  if (!base) {
+    console.warn("[resolveStream] YTDLP_SERVICE_URL not set");
+    return null;
+  }
+  const endpoint = `${base.replace(/\/+$/, "")}/resolve`;
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 25_000); // yt-dlp can take a while
   try {
-    const res = await fetch(`${base.replace(/\/$/, "")}/resolve`, {
+    console.log("[resolveStream] calling ytdlp", endpoint, "for", sourceUrl);
+    const res = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
