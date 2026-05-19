@@ -122,6 +122,9 @@ const extractors: Record<string, Extractor> = {
     return mkResolved(link, "mp4", { Referer: refererOf(url) });
   },
 
+  // terabox & friends: shortcut directly to yt-dlp microservice
+  terabox: async (url) => resolveViaYtdlp(url),
+
   // generic: try same-origin fetch and search for m3u8/mp4 (works for many embeds with <source>)
   generic: async (url) => {
     const html = await fetchText(url);
@@ -159,6 +162,7 @@ function pickExtractor(url: string): Extractor {
   if (/filemoon|moonplayer|filelions|kerapoxy/.test(host)) return extractors.filemoon;
   if (/mixdrop/.test(host)) return extractors.mixdrop;
   if (/doodstream|dood\.(?:to|so|la|li|wf|pm|re|sh|yt|cx|stream|watch)/.test(host)) return extractors.doodstream;
+  if (/terabox|freeterabox|videynow|1024tera|4funbox|mirrobox|nephobox|momerybox|teraboxapp/.test(host)) return extractors.terabox;
   return extractors.generic;
 }
 
