@@ -122,6 +122,9 @@ const extractors: Record<string, Extractor> = {
     return mkResolved(link, "mp4", { Referer: refererOf(url) });
   },
 
+  // terabox & friends: shortcut directly to yt-dlp microservice
+  terabox: async (url) => resolveViaYtdlp(url),
+
   // generic: try same-origin fetch and search for m3u8/mp4 (works for many embeds with <source>)
   generic: async (url) => {
     const html = await fetchText(url);
