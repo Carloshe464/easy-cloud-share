@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { detectExternalKind } from "@/components/cloud/types";
 import { getStoredUserId } from "@/lib/cloud";
 import { useFavorites, useHistory, useProgress, posterFor, fetchCatalog, type Title } from "@/lib/streaming";
-import { resolveStreamFn } from "@/lib/stream.functions";
+
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/streaming/watch/$id")({
