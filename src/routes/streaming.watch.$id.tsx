@@ -201,94 +201,29 @@ function PlayerSurface({ url, name, initial, onProgress, onEnded }: {
   const ext = detectExternalKind(url);
   const isDirectHls = url.toLowerCase().includes(".m3u8");
   const isDirectMp4 = ext?.kind === "video" && !isDirectHls;
-  const isEmbed = !isDirectHls && !isDirectMp4;
-
-  // For embeds, attempt server-side resolution to a direct stream.
-  const [resolveState, setResolveState] = useState<
-    | { phase: "idle" }
-    | { phase: "loading" }
-    | { phase: "ok"; streamUrl: string; kind: "hls" | "mp4" }
-    | { phase: "fail" }
-  >({ phase: isEmbed ? "loading" : "idle" });
-
-  useEffect(() => {
-    if (!isEmbed) { setResolveState({ phase: "idle" }); return; }
-    let cancelled = false;
-    setResolveState({ phase: "loading" });
-    resolveStreamFn({ data: { url } })
-      .then((r) => {
-        if (cancelled) return;
-        if (r.ok) setResolveState({ phase: "ok", streamUrl: r.streamUrl, kind: r.kind });
-        else setResolveState({ phase: "fail" });
-      })
-      .catch(() => { if (!cancelled) setResolveState({ phase: "fail" }); });
-    return () => { cancelled = true; };
-  }, [url, isEmbed]);
 
   if (isDirectHls || isDirectMp4) {
     return <NativePlayer url={url} initial={initial} onProgress={onProgress} onEnded={onEnded} hls={isDirectHls} />;
   }
 
-  if (resolveState.phase === "loading") {
-    return (
-      <div className="relative aspect-video rounded-xl overflow-hidden ring-1 ring-border bg-black flex items-center justify-center shadow-[0_24px_60px_-20px_rgba(0,0,0,0.85)]">
-        <div className="flex flex-col items-center gap-3 text-muted-foreground">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-sm">Preparando reprodução…</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (resolveState.phase === "ok") {
-    return (
-      <NativePlayer
-        url={resolveState.streamUrl}
-        initial={initial}
-        onProgress={onProgress}
-        onEnded={onEnded}
-        hls={resolveState.kind === "hls"}
-      />
-    );
-  }
-
-  // Fallback: known iframe-friendly providers keep the iframe; everything else
-  // (pirate hosts that block X-Frame / show "conexão recusada") gets a clean
-  // escape-hatch screen with the original link instead of a broken iframe.
-  const iframeFriendly = ext?.kind === "youtube" || ext?.kind === "vimeo";
-
-  if (ext && iframeFriendly) {
-    return (
-      <div className="relative aspect-video rounded-xl overflow-hidden ring-1 ring-border bg-black shadow-[0_24px_60px_-20px_rgba(0,0,0,0.85)]">
-        <iframe src={ext.src} title={name} allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-          allowFullScreen className="absolute inset-0 w-full h-full" />
-        <a href={url} target="_blank" rel="noopener noreferrer"
-          className="absolute top-3 right-3 inline-flex items-center gap-1.5 bg-black/70 hover:bg-black/90 backdrop-blur text-foreground text-xs font-medium px-3 py-1.5 rounded-full ring-1 ring-white/15 transition">
-          <ExternalLink className="w-3.5 h-3.5" /> Abrir no site original
-        </a>
-      </div>
-    );
-  }
-
-  let host = "";
-  try { host = new URL(url).hostname.replace(/^www\./, ""); } catch { /* noop */ }
+  // Para qualquer outro link adicionado via Play, usar o player do próprio site
+  // através de um iframe direto. Sem tentativa de resolução remota.
+  const iframeSrc = ext?.src ?? url;
 
   return (
-    <div className="relative aspect-video rounded-xl overflow-hidden ring-1 ring-border bg-gradient-to-br from-card via-background to-card flex items-center justify-center shadow-[0_24px_60px_-20px_rgba(0,0,0,0.85)]">
-      <div className="text-center px-6 max-w-md">
-        <div className="mx-auto w-14 h-14 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mb-4 ring-1 ring-destructive/30">
-          <ExternalLink className="w-6 h-6" />
-        </div>
-        <h3 className="font-display text-xl mb-2">Reprodução indisponível aqui</h3>
-        <p className="text-sm text-muted-foreground mb-5">
-          {host ? <>O provedor <strong className="text-foreground/80">{host}</strong> bloqueia a reprodução fora do site original.</> : "Este link não permite reprodução embutida."}
-          {" "}Abra na origem para assistir.
-        </p>
-        <a href={url} target="_blank" rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-full font-semibold hover:opacity-90 transition">
-          <ExternalLink className="w-4 h-4" /> Abrir no site original
-        </a>
-      </div>
+    <div className="relative aspect-video rounded-xl overflow-hidden ring-1 ring-border bg-black shadow-[0_24px_60px_-20px_rgba(0,0,0,0.85)]">
+      <iframe
+        src={iframeSrc}
+        title={name}
+        allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+        allowFullScreen
+        referrerPolicy="no-referrer"
+        className="absolute inset-0 w-full h-full"
+      />
+      <a href={url} target="_blank" rel="noopener noreferrer"
+        className="absolute top-3 right-3 inline-flex items-center gap-1.5 bg-black/70 hover:bg-black/90 backdrop-blur text-foreground text-xs font-medium px-3 py-1.5 rounded-full ring-1 ring-white/15 transition">
+        <ExternalLink className="w-3.5 h-3.5" /> Abrir no site original
+      </a>
     </div>
   );
 }
