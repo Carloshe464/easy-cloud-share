@@ -363,14 +363,16 @@ function AppPage() {
       const tId = toast.loading(`Enviando ${list.length} arquivo(s)...`);
       try {
         for (const file of list) {
-          const sp = `${path}${crypto.randomUUID()}-${file.name}`;
+          const safe = file.name.replace(/[^\w.\-]+/g, "_").replace(/_+/g, "_").slice(-120) || "file";
+          const sp = `${path}${crypto.randomUUID()}-${safe}`;
           const { error: upErr } = await supabase.storage.from("cloud-files").upload(sp, file, {
             contentType: file.type || "application/octet-stream",
+            upsert: false,
           });
           if (upErr) { toast.error(`${file.name}: ${upErr.message}`); continue; }
           await supabase.from("files").insert({
             user_id: user!.id, folder_id: targetFolder.id, name: file.name,
-            storage_path: sp, size_bytes: file.size, mime_type: file.type || null,
+            storage_path: sp, size_bytes: file.size, mime_type: file.type || "application/octet-stream",
           });
         }
         toast.success("Upload concluído", { id: tId });
