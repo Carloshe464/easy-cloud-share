@@ -26,13 +26,13 @@ export async function fetchCatalog(userId: string): Promise<{
   folders: FolderRow[];
   titles: Title[];
 }> {
-  // Public catalog = items any user has shared via "Publicar no Play"
-  // PLUS items owned by the current user (so own items show even if not public yet — useful for admin/seeded demos)
+  // Catálogo = qualquer arquivo público (link externo OU upload no storage) de QUALQUER perfil
+  // + itens do próprio usuário (mesmo não públicos), para curadoria/admin.
   const { data: files } = await supabase
     .from("files")
     .select("*")
-    .not("external_url", "is", null)
     .or(`is_public.eq.true,user_id.eq.${userId}`)
+    .or("external_url.not.is.null,storage_path.not.is.null")
     .order("created_at", { ascending: false });
 
   const fileRows = (files ?? []) as FileRow[];
