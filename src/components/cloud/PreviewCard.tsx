@@ -1,11 +1,9 @@
-import { Download, ExternalLink, FileIcon, Link2, Loader2, Pencil, X } from "lucide-react";
+import { Download, ExternalLink, FileIcon, Link2, Pencil, X } from "lucide-react";
 import { formatBytes, publicUrl } from "@/lib/cloud";
 import {
   detectExternalKind, isAudio, isExternalLink, isImage, isVideo, type FileRow,
 } from "./types";
-import { useEffect, useRef, useState } from "react";
-import Hls from "hls.js";
-import { resolveStreamFn } from "@/lib/stream.functions";
+import { useEffect } from "react";
 
 export function PreviewCard({ file, onClose, onEditLink }: {
   file: FileRow;
@@ -76,7 +74,9 @@ export function PreviewCard({ file, onClose, onEditLink }: {
             <iframe src={ext.src} title={file.name} className="w-full h-full rounded-lg bg-card"
               allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen />
           ) : (
-            <ResolvedEmbed url={file.external_url!} name={file.name} fallbackSrc={ext.src} />
+            <iframe src={ext.src} title={file.name} className="w-full h-full rounded-lg bg-card"
+              allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+              referrerPolicy="no-referrer" allowFullScreen />
           )
 
         ) : img ? (
@@ -104,57 +104,5 @@ export function PreviewCard({ file, onClose, onEditLink }: {
         )}
       </div>
     </div>
-  );
-}
-
-function ResolvedEmbed({ url, name, fallbackSrc }: { url: string; name: string; fallbackSrc: string }) {
-  const [state, setState] = useState<
-    | { phase: "loading" }
-    | { phase: "ok"; streamUrl: string; kind: "hls" | "mp4" }
-    | { phase: "fail" }
-  >({ phase: "loading" });
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    setState({ phase: "loading" });
-    resolveStreamFn({ data: { url } })
-      .then((r) => {
-        if (cancelled) return;
-        if (r.ok) setState({ phase: "ok", streamUrl: r.streamUrl, kind: r.kind });
-        else setState({ phase: "fail" });
-      })
-      .catch(() => { if (!cancelled) setState({ phase: "fail" }); });
-    return () => { cancelled = true; };
-  }, [url]);
-
-  useEffect(() => {
-    if (state.phase !== "ok") return;
-    const v = videoRef.current; if (!v) return;
-    if (state.kind === "hls" && Hls.isSupported()) {
-      const inst = new Hls();
-      inst.loadSource(state.streamUrl);
-      inst.attachMedia(v);
-      return () => { inst.destroy(); };
-    }
-    v.src = state.streamUrl;
-  }, [state]);
-
-  if (state.phase === "loading") {
-    return (
-      <div className="flex flex-col items-center gap-3 text-muted-foreground">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <p className="text-sm">Resolvendo stream via Hefesto…</p>
-      </div>
-    );
-  }
-
-  if (state.phase === "ok") {
-    return <video ref={videoRef} controls autoPlay className="max-w-full max-h-full rounded-lg" />;
-  }
-
-  return (
-    <iframe src={fallbackSrc} title={name} className="w-full h-full rounded-lg bg-card"
-      allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen />
   );
 }
