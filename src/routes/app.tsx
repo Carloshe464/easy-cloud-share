@@ -157,15 +157,17 @@ function AppPage() {
     const tId = toast.loading(`Enviando ${list.length} arquivo(s)...`);
     try {
       for (const file of list) {
-        const path = `${user.id}/${crypto.randomUUID()}-${file.name}`;
+        const safe = file.name.replace(/[^\w.\-]+/g, "_").replace(/_+/g, "_").slice(-120) || "file";
+        const path = `${user.id}/${crypto.randomUUID()}-${safe}`;
         const { error: upErr } = await supabase.storage.from("cloud-files").upload(path, file, {
           contentType: file.type || "application/octet-stream",
+          upsert: false,
         });
         if (upErr) { toast.error(`${file.name}: ${upErr.message}`); continue; }
         const { error: dbErr } = await supabase.from("files").insert({
           user_id: user.id, folder_id: currentFolder?.id ?? null,
           name: file.name, storage_path: path, size_bytes: file.size,
-          mime_type: file.type || null,
+          mime_type: file.type || "application/octet-stream",
         });
         if (dbErr) toast.error(`${file.name}: ${dbErr.message}`);
       }
