@@ -64,6 +64,33 @@ export function detectExternalKind(raw: string): { kind: ExternalKind; src: stri
     if (!id) id = url.searchParams.get("id");
     if (id) return { kind: "iframe", src: `https://drive.google.com/file/d/${id}/preview` };
   }
+  // Mega.nz — public file links → embed player
+  if (host === "mega.nz" || host === "mega.co.nz") {
+    const m = path.match(/\/file\/([\w-]+)/);
+    if (m) return { kind: "iframe", src: `https://mega.nz/embed/${m[1]}${url.hash || ""}` };
+    const m2 = path.match(/\/embed\/([\w-]+)/);
+    if (m2) return { kind: "iframe", src: href };
+  }
+
+  // Dailymotion
+  if (host === "dailymotion.com") {
+    const m = path.match(/\/video\/([\w]+)/);
+    if (m) return { kind: "iframe", src: `https://www.dailymotion.com/embed/video/${m[1]}` };
+  }
+  if (host === "dai.ly") {
+    const id = path.replace(/^\//, "");
+    if (id) return { kind: "iframe", src: `https://www.dailymotion.com/embed/video/${id}` };
+  }
+
+  // Twitch clip / video
+  if (host === "twitch.tv" || host === "clips.twitch.tv") {
+    const parent = "lovable.app";
+    const clip = path.match(/\/clip\/([\w-]+)/) || (host === "clips.twitch.tv" ? [null, path.slice(1)] : null);
+    if (clip && clip[1]) return { kind: "iframe", src: `https://clips.twitch.tv/embed?clip=${clip[1]}&parent=${parent}` };
+    const vid = path.match(/\/videos\/(\d+)/);
+    if (vid) return { kind: "iframe", src: `https://player.twitch.tv/?video=${vid[1]}&parent=${parent}` };
+  }
+
 
 
   if (/\.(png|jpe?g|gif|webp|avif|bmp|svg)$/i.test(path)) return { kind: "image", src: href };
