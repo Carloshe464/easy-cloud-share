@@ -56,6 +56,16 @@ export function detectExternalKind(raw: string): { kind: ExternalKind; src: stri
   }
   if (host === "player.vimeo.com") return { kind: "vimeo", src: href };
 
+  // Google Drive — convert public share URLs to embeddable preview player
+  if (host === "drive.google.com" || host === "docs.google.com") {
+    let id: string | null = null;
+    const m = path.match(/\/file\/d\/([\w-]{10,})/);
+    if (m) id = m[1];
+    if (!id) id = url.searchParams.get("id");
+    if (id) return { kind: "iframe", src: `https://drive.google.com/file/d/${id}/preview` };
+  }
+
+
   if (/\.(png|jpe?g|gif|webp|avif|bmp|svg)$/i.test(path)) return { kind: "image", src: href };
   if (/\.(mp4|webm|ogv|mov|m4v)$/i.test(path)) return { kind: "video", src: href };
   if (/\.(mp3|wav|ogg|m4a|flac|aac)$/i.test(path)) return { kind: "audio", src: href };
