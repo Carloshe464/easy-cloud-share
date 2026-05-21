@@ -8,7 +8,9 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { detectExternalKind } from "@/components/cloud/types";
 import { getStoredUserId } from "@/lib/cloud";
+import { resolveStreamFn } from "@/lib/stream.functions";
 import { useFavorites, useHistory, useProgress, posterFor, fetchCatalog, type Title } from "@/lib/streaming";
+
 
 import { toast } from "sonner";
 
