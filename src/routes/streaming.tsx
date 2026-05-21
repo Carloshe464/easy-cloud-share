@@ -16,10 +16,12 @@ export const Route = createFileRoute("/streaming")({
 function StreamingLayout() {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
+  const [phone, setPhone] = useState("");
   const path = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
     if (!getStoredUserId()) navigate({ to: "/" });
+    setPhone(getStoredPhone() ?? "");
   }, [navigate]);
 
   useEffect(() => {
@@ -29,9 +31,11 @@ function StreamingLayout() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const phone = getStoredPhone() ?? "";
-  const initialQ = typeof window !== "undefined" ? (new URLSearchParams(window.location.search).get("q") ?? "") : "";
-  const [q, setQ] = useState<string>(initialQ);
+  const [q, setQ] = useState("");
+
+  useEffect(() => {
+    setQ(new URLSearchParams(window.location.search).get("q") ?? "");
+  }, [path]);
 
   const onSearch = (e: React.FormEvent) => {
     e.preventDefault();
