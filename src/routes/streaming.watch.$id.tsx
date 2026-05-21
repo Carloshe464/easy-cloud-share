@@ -195,6 +195,9 @@ function EpisodeList({ items, currentId, progressMap }:
   );
 }
 
+// Hosts we know how to embed natively via iframe (no Hefesto needed)
+const EMBED_HOSTS = /youtube|youtu\.be|vimeo|drive\.google|docs\.google|mega\.nz|mega\.co\.nz|dailymotion|dai\.ly|twitch/i;
+
 function PlayerSurface({ url, name, initial, onProgress, onEnded }: {
   url: string; name: string; initial: number;
   onProgress: (t: number, d: number) => void;
@@ -208,27 +211,78 @@ function PlayerSurface({ url, name, initial, onProgress, onEnded }: {
     return <NativePlayer url={url} initial={initial} onProgress={onProgress} onEnded={onEnded} hls={isDirectHls} />;
   }
 
-  // Para qualquer outro link adicionado via Play, usar o player do próprio site
-  // através de um iframe direto. Sem tentativa de resolução remota.
-  const iframeSrc = ext?.src ?? url;
+  let host = "";
+  try { host = new URL(url).hostname; } catch { /* ignore */ }
+  const knownEmbed = EMBED_HOSTS.test(host);
 
+  // YouTube/Vimeo/Drive/Mega/etc → iframe direto
+  if (knownEmbed) {
+    return <IframePlayer src={ext?.src ?? url} name={name} originalUrl={url} />;
+  }
+
+  // Caso desconhecido: tenta resolver via Hefesto; se falhar, cai pra iframe.
+  return <ResolvedPlayer url={url} name={name} initial={initial} onProgress={onProgress} onEnded={onEnded} fallbackSrc={ext?.src ?? url} />;
+}
+
+function IframePlayer({ src, name, originalUrl }: { src: string; name: string; originalUrl: string }) {
   return (
     <div className="relative aspect-video rounded-xl overflow-hidden ring-1 ring-border bg-black shadow-[0_24px_60px_-20px_rgba(0,0,0,0.85)]">
       <iframe
-        src={iframeSrc}
+        src={src}
         title={name}
         allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
         allowFullScreen
         referrerPolicy="no-referrer"
         className="absolute inset-0 w-full h-full"
       />
-      <a href={url} target="_blank" rel="noopener noreferrer"
+      <a href={originalUrl} target="_blank" rel="noopener noreferrer"
         className="absolute top-3 right-3 inline-flex items-center gap-1.5 bg-black/70 hover:bg-black/90 backdrop-blur text-foreground text-xs font-medium px-3 py-1.5 rounded-full ring-1 ring-white/15 transition">
         <ExternalLink className="w-3.5 h-3.5" /> Abrir no site original
       </a>
     </div>
   );
 }
+
+function ResolvedPlayer({ url, name, initial, onProgress, onEnded, fallbackSrc }: {
+  url: string; name: string; initial: number;
+  onProgress: (t: number, d: number) => void;
+  onEnded: () => void; fallbackSrc: string;
+}) {
+  const [state, setState] = useState<
+    | { status: "loading" }
+    | { status: "resolved"; streamUrl: string; kind: "hls" | "mp4" }
+    | { status: "fallback" }
+  >({ status: "loading" });
+
+  useEffect(() => {
+    let alive = true;
+    setState({ status: "loading" });
+    resolveStreamFn({ data: { url } })
+      .then((r) => {
+        if (!alive) return;
+        if (r?.ok && (r.kind === "hls" || r.kind === "mp4")) {
+          setState({ status: "resolved", streamUrl: r.streamUrl, kind: r.kind });
+        } else {
+          setState({ status: "fallback" });
+        }
+      })
+      .catch(() => { if (alive) setState({ status: "fallback" }); });
+    return () => { alive = false; };
+  }, [url]);
+
+  if (state.status === "loading") {
+    return (
+      <div className="relative aspect-video rounded-xl overflow-hidden ring-1 ring-border bg-black flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+  if (state.status === "resolved") {
+    return <NativePlayer url={state.streamUrl} initial={initial} onProgress={onProgress} onEnded={onEnded} hls={state.kind === "hls"} />;
+  }
+  return <IframePlayer src={fallbackSrc} name={name} originalUrl={url} />;
+}
+
 
 function NativePlayer({ url, initial, onProgress, onEnded, hls: useHls }: {
   url: string; initial: number;
