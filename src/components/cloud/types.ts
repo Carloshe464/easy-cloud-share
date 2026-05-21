@@ -84,7 +84,7 @@ export function detectExternalKind(raw: string): { kind: ExternalKind; src: stri
 
   // Twitch clip / video
   if (host === "twitch.tv" || host === "clips.twitch.tv") {
-    const parent = typeof window !== "undefined" ? window.location.hostname : "lovable.app";
+    const parent = "lovable.app";
     const clip = path.match(/\/clip\/([\w-]+)/) || (host === "clips.twitch.tv" ? [null, path.slice(1)] : null);
     if (clip && clip[1]) return { kind: "iframe", src: `https://clips.twitch.tv/embed?clip=${clip[1]}&parent=${parent}` };
     const vid = path.match(/\/videos\/(\d+)/);
