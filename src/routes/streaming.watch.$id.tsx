@@ -197,6 +197,7 @@ function EpisodeList({ items, currentId, progressMap }:
 
 // Hosts we know how to embed natively via iframe (no Hefesto needed)
 const EMBED_HOSTS = /youtube|youtu\.be|vimeo|drive\.google|docs\.google|mega\.nz|mega\.co\.nz|dailymotion|dai\.ly|twitch/i;
+const GOOGLE_DRIVE_HOSTS = /drive\.google|docs\.google/i;
 
 function PlayerSurface({ url, name, initial, onProgress, onEnded }: {
   url: string; name: string; initial: number;
@@ -215,16 +216,26 @@ function PlayerSurface({ url, name, initial, onProgress, onEnded }: {
   try { host = new URL(url).hostname; } catch { /* ignore */ }
   const knownEmbed = EMBED_HOSTS.test(host);
 
-  // YouTube/Vimeo/Drive/Mega/etc → iframe direto
+  // Drive público → espelha o player de preview do Drive dentro do app.
+  if (GOOGLE_DRIVE_HOSTS.test(host)) {
+    return <IframePlayer src={ext?.src ?? url} name={name} originalUrl={url} referrerPolicy="origin" />;
+  }
+
+  // YouTube/Vimeo/Mega/etc → iframe direto
   if (knownEmbed) {
-    return <IframePlayer src={ext?.src ?? url} name={name} originalUrl={url} />;
+    return <IframePlayer src={ext?.src ?? url} name={name} originalUrl={url} referrerPolicy="no-referrer" />;
   }
 
   // Caso desconhecido: tenta resolver via Hefesto; se falhar, cai pra iframe.
   return <ResolvedPlayer url={url} name={name} initial={initial} onProgress={onProgress} onEnded={onEnded} fallbackSrc={ext?.src ?? url} />;
 }
 
-function IframePlayer({ src, name, originalUrl }: { src: string; name: string; originalUrl: string }) {
+function IframePlayer({ src, name, originalUrl, referrerPolicy }: {
+  src: string;
+  name: string;
+  originalUrl: string;
+  referrerPolicy?: React.HTMLAttributeReferrerPolicy;
+}) {
   return (
     <div className="relative aspect-video rounded-xl overflow-hidden ring-1 ring-border bg-black shadow-[0_24px_60px_-20px_rgba(0,0,0,0.85)]">
       <iframe
@@ -232,7 +243,7 @@ function IframePlayer({ src, name, originalUrl }: { src: string; name: string; o
         title={name}
         allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
         allowFullScreen
-        referrerPolicy="no-referrer"
+        referrerPolicy={referrerPolicy}
         className="absolute inset-0 w-full h-full"
       />
       <a href={originalUrl} target="_blank" rel="noopener noreferrer"
