@@ -38,7 +38,8 @@ export function detectExternalKind(raw: string): { kind: ExternalKind; src: stri
   let url: URL;
   try { url = new URL(raw.trim()); } catch { return null; }
   const href = url.toString();
-  const path = url.pathname.toLowerCase();
+  const rawPath = url.pathname;
+  const path = rawPath.toLowerCase();
   const host = url.hostname.replace(/^www\./, "");
 
   if (host === "youtube.com" || host === "m.youtube.com") {
@@ -47,7 +48,7 @@ export function detectExternalKind(raw: string): { kind: ExternalKind; src: stri
     if (path.startsWith("/embed/")) return { kind: "youtube", src: href };
   }
   if (host === "youtu.be") {
-    const id = path.replace(/^\//, "");
+    const id = rawPath.replace(/^\//, "").split(/[?#]/)[0];
     if (id) return { kind: "youtube", src: `https://www.youtube.com/embed/${id}` };
   }
   if (host === "vimeo.com") {
@@ -59,16 +60,16 @@ export function detectExternalKind(raw: string): { kind: ExternalKind; src: stri
   // Google Drive — convert public share URLs to embeddable preview player
   if (host === "drive.google.com" || host === "docs.google.com") {
     let id: string | null = null;
-    const m = path.match(/\/file\/d\/([\w-]{10,})/);
+    const m = rawPath.match(/\/file\/d\/([\w-]{10,})/i);
     if (m) id = m[1];
     if (!id) id = url.searchParams.get("id");
     if (id) return { kind: "iframe", src: `https://drive.google.com/file/d/${id}/preview` };
   }
   // Mega.nz — public file links → embed player
   if (host === "mega.nz" || host === "mega.co.nz") {
-    const m = path.match(/\/file\/([\w-]+)/);
+    const m = rawPath.match(/\/file\/([\w-]+)/i);
     if (m) return { kind: "iframe", src: `https://mega.nz/embed/${m[1]}${url.hash || ""}` };
-    const m2 = path.match(/\/embed\/([\w-]+)/);
+    const m2 = rawPath.match(/\/embed\/([\w-]+)/i);
     if (m2) return { kind: "iframe", src: href };
   }
 
@@ -78,14 +79,14 @@ export function detectExternalKind(raw: string): { kind: ExternalKind; src: stri
     if (m) return { kind: "iframe", src: `https://www.dailymotion.com/embed/video/${m[1]}` };
   }
   if (host === "dai.ly") {
-    const id = path.replace(/^\//, "");
+    const id = rawPath.replace(/^\//, "");
     if (id) return { kind: "iframe", src: `https://www.dailymotion.com/embed/video/${id}` };
   }
 
   // Twitch clip / video
   if (host === "twitch.tv" || host === "clips.twitch.tv") {
     const parent = "lovable.app";
-    const clip = path.match(/\/clip\/([\w-]+)/) || (host === "clips.twitch.tv" ? [null, path.slice(1)] : null);
+    const clip = rawPath.match(/\/clip\/([\w-]+)/i) || (host === "clips.twitch.tv" ? [null, rawPath.slice(1)] : null);
     if (clip && clip[1]) return { kind: "iframe", src: `https://clips.twitch.tv/embed?clip=${clip[1]}&parent=${parent}` };
     const vid = path.match(/\/videos\/(\d+)/);
     if (vid) return { kind: "iframe", src: `https://player.twitch.tv/?video=${vid[1]}&parent=${parent}` };
