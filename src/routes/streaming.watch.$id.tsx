@@ -221,9 +221,9 @@ function PlayerSurface({ url, name, initial, onProgress, onEnded }: {
     return <IframePlayer src={ext?.src ?? url} name={name} originalUrl={url} referrerPolicy="origin" />;
   }
 
-  // YouTube/Vimeo/Mega/etc → iframe direto
+  // YouTube/Vimeo/Mega/etc → iframe direto (sem referrerPolicy, senão YouTube bloqueia com erro 153)
   if (knownEmbed) {
-    return <IframePlayer src={ext?.src ?? url} name={name} originalUrl={url} referrerPolicy="no-referrer" />;
+    return <IframePlayer src={ext?.src ?? url} name={name} originalUrl={url} />;
   }
 
   // Caso desconhecido: tenta resolver via Hefesto; se falhar, cai pra iframe.
