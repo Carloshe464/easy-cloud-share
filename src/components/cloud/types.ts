@@ -92,7 +92,59 @@ export function detectExternalKind(raw: string): { kind: ExternalKind; src: stri
     if (vid) return { kind: "iframe", src: `https://player.twitch.tv/?video=${vid[1]}&parent=${parent}` };
   }
 
+  // TikTok
+  if (host === "tiktok.com" || host.endsWith(".tiktok.com")) {
+    const m = rawPath.match(/\/video\/(\d+)/i);
+    if (m) return { kind: "iframe", src: `https://www.tiktok.com/embed/v2/${m[1]}` };
+  }
 
+  // Facebook video / reels / watch
+  if (host === "facebook.com" || host === "m.facebook.com" || host === "fb.watch") {
+    return { kind: "iframe", src: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(href)}&show_text=false&autoplay=true` };
+  }
+
+  // Instagram reels / posts
+  if (host === "instagram.com") {
+    const m = rawPath.match(/\/(reel|p|tv)\/([\w-]+)/i);
+    if (m) return { kind: "iframe", src: `https://www.instagram.com/${m[1]}/${m[2]}/embed` };
+  }
+
+  // X / Twitter status
+  if (host === "twitter.com" || host === "x.com") {
+    const m = rawPath.match(/\/status\/(\d+)/i);
+    if (m) return { kind: "iframe", src: `https://platform.twitter.com/embed/Tweet.html?id=${m[1]}` };
+  }
+
+  // Streamable
+  if (host === "streamable.com") {
+    const id = rawPath.replace(/^\/(e\/)?/i, "").split(/[/?#]/)[0];
+    if (id) return { kind: "iframe", src: `https://streamable.com/e/${id}` };
+  }
+
+  // Odysee
+  if (host === "odysee.com") {
+    return { kind: "iframe", src: href.replace("odysee.com/", "odysee.com/$/embed/") };
+  }
+
+  // Rumble
+  if (host === "rumble.com") {
+    const m = rawPath.match(/\/(v[\w-]+)/i);
+    if (m) return { kind: "iframe", src: `https://rumble.com/embed/${m[1]}/` };
+  }
+
+  // Kick
+  if (host === "kick.com") {
+    const m = rawPath.match(/\/video\/([\w-]+)/i);
+    if (m) return { kind: "iframe", src: `https://player.kick.com/${m[1]}` };
+  }
+
+  // SoundCloud / Spotify
+  if (host === "soundcloud.com") {
+    return { kind: "iframe", src: `https://w.soundcloud.com/player/?url=${encodeURIComponent(href)}&auto_play=true` };
+  }
+  if (host === "open.spotify.com") {
+    return { kind: "iframe", src: href.replace("open.spotify.com/", "open.spotify.com/embed/") };
+  }
 
   if (/\.(png|jpe?g|gif|webp|avif|bmp|svg)$/i.test(path)) return { kind: "image", src: href };
   if (/\.(mp4|webm|ogv|mov|m4v)$/i.test(path)) return { kind: "video", src: href };
