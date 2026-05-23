@@ -196,7 +196,7 @@ function EpisodeList({ items, currentId, progressMap }:
 }
 
 // Hosts we know how to embed natively via iframe (no Hefesto needed)
-const EMBED_HOSTS = /youtube|youtu\.be|vimeo|drive\.google|docs\.google|mega\.nz|mega\.co\.nz|dailymotion|dai\.ly|twitch/i;
+const EMBED_HOSTS = /youtube|youtu\.be|vimeo|drive\.google|docs\.google|mega\.nz|mega\.co\.nz|dailymotion|dai\.ly|twitch|tiktok|facebook|fb\.watch|instagram|twitter|x\.com|streamable|odysee|rumble|kick\.com|soundcloud|spotify/i;
 const GOOGLE_DRIVE_HOSTS = /drive\.google|docs\.google/i;
 
 function PlayerSurface({ url, name, initial, onProgress, onEnded }: {
