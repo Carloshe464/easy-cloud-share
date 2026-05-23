@@ -44,14 +44,14 @@ export function detectExternalKind(raw: string): { kind: ExternalKind; src: stri
 
   if (host === "youtube.com" || host === "m.youtube.com") {
     const v = url.searchParams.get("v");
-    if (v) return { kind: "youtube", src: `https://www.youtube-nocookie.com/embed/${v}?rel=0&playsinline=1` };
+    if (v) return { kind: "youtube", src: `https://www.youtube.com/embed/${v}` };
     if (path.startsWith("/embed/")) return { kind: "youtube", src: href };
     const shorts = rawPath.match(/\/shorts\/([\w-]+)/i);
-    if (shorts) return { kind: "youtube", src: `https://www.youtube-nocookie.com/embed/${shorts[1]}?rel=0&playsinline=1` };
+    if (shorts) return { kind: "youtube", src: `https://www.youtube.com/embed/${shorts[1]}` };
   }
   if (host === "youtu.be") {
     const id = rawPath.replace(/^\//, "").split(/[?#]/)[0];
-    if (id) return { kind: "youtube", src: `https://www.youtube-nocookie.com/embed/${id}?rel=0&playsinline=1` };
+    if (id) return { kind: "youtube", src: `https://www.youtube.com/embed/${id}` };
   }
   if (host === "vimeo.com") {
     const id = path.replace(/^\//, "").split("/")[0];
