@@ -208,18 +208,10 @@ async function writeCache(sourceUrl: string, r: ResolvedStream) {
 
 // --- ytdlp fallback ---------------------------------------------------------
 
-async function resolveViaYtdlp(sourceUrl: string): Promise<ResolvedStream | null> {
-  const base = process.env.YTDLP_SERVICE_URL?.trim();
-  const token = process.env.YTDLP_SERVICE_TOKEN?.trim();
-  if (!base) {
-    console.warn("[resolveStream] YTDLP_SERVICE_URL not set");
-    return null;
-  }
-  const endpoint = `${base.replace(/\/+$/, "")}/resolve`;
+async function ytdlpAttempt(endpoint: string, sourceUrl: string, token: string | undefined, timeoutMs: number) {
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 25_000); // yt-dlp can take a while
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    console.log("[resolveStream] calling ytdlp", endpoint, "for", sourceUrl);
     const res = await fetch(endpoint, {
       method: "POST",
       headers: {
@@ -244,15 +236,35 @@ async function resolveViaYtdlp(sourceUrl: string): Promise<ResolvedStream | null
       streamUrl: j.streamUrl,
       kind: j.kind,
       headers: j.headers ?? {},
-      resolver: "ytdlp",
+      resolver: "ytdlp" as const,
       expiresAt: j.expiresAt ?? Date.now() + 30 * 60 * 1000,
     };
-  } catch (err) {
-    console.warn("[resolveStream] ytdlp fallback error", err);
-    return null;
   } finally {
     clearTimeout(t);
   }
+}
+
+async function resolveViaYtdlp(sourceUrl: string): Promise<ResolvedStream | null> {
+  const base = process.env.YTDLP_SERVICE_URL?.trim();
+  const token = process.env.YTDLP_SERVICE_TOKEN?.trim();
+  if (!base) {
+    console.warn("[resolveStream] YTDLP_SERVICE_URL not set");
+    return null;
+  }
+  const endpoint = `${base.replace(/\/+$/, "")}/resolve`;
+
+  // 1ª tentativa: 20s (rápido caso já esteja quente)
+  // 2ª tentativa: 55s (cobre cold-start do fly.dev + extração lenta do Terabox)
+  for (const timeout of [20_000, 55_000]) {
+    try {
+      console.log("[resolveStream] calling ytdlp", endpoint, "for", sourceUrl, "(timeout", timeout, "ms)");
+      const r = await ytdlpAttempt(endpoint, sourceUrl, token, timeout);
+      if (r) return r;
+    } catch (err) {
+      console.warn("[resolveStream] ytdlp attempt failed", err);
+    }
+  }
+  return null;
 }
 
 // --- public API -------------------------------------------------------------
