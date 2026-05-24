@@ -3,6 +3,24 @@ import { z } from "zod";
 import { resolveStream } from "./stream-resolver.server";
 import { signStreamToken, PLAY_TTL_MS } from "./stream-sign.server";
 
+// Allowlist of hostnames the resolver is allowed to fetch.
+// Prevents SSRF (probing internal IPs, cloud metadata, etc.) and bandwidth abuse.
+const ALLOWED_HOST_RE = /(^|\.)(youtube\.com|youtu\.be|youtube-nocookie\.com|vimeo\.com|player\.vimeo\.com|drive\.google\.com|docs\.google\.com|mega\.nz|mega\.co\.nz|dailymotion\.com|dai\.ly|twitch\.tv|tiktok\.com|facebook\.com|fb\.watch|instagram\.com|twitter\.com|x\.com|streamable\.com|odysee\.com|rumble\.com|kick\.com|soundcloud\.com|spotify\.com|terabox\.com|1024terabox\.com|teraboxapp\.com|4funbox\.com|mirrobox\.com|nephobox\.com|googleusercontent\.com|googlevideo\.com|akamaihd\.net|cloudfront\.net)$/i;
+
+const PRIVATE_NET_RE = /^(10\.|127\.|0\.|169\.254\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|::1$|fc00:|fd00:|fe80:|localhost$)/i;
+
+function isAllowedUrl(raw: string): boolean {
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== "http:" && u.protocol !== "https:") return false;
+    const host = u.hostname.toLowerCase();
+    if (PRIVATE_NET_RE.test(host)) return false;
+    return ALLOWED_HOST_RE.test(host);
+  } catch {
+    return false;
+  }
+}
+
 const Input = z.object({
   url: z.string().url().max(2048),
 });
@@ -10,6 +28,9 @@ const Input = z.object({
 export const resolveStreamFn = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => Input.parse(input))
   .handler(async ({ data }) => {
+    if (!isAllowedUrl(data.url)) {
+      return { ok: false as const, reason: "host_not_allowed" as const };
+    }
     const r = await resolveStream(data.url);
     if (!r) return { ok: false as const, reason: "unresolved" as const };
 
