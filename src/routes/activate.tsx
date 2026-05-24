@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { KeyRound, Loader2, ArrowRight, Check, LogOut } from "lucide-react";
 import { getStoredUserId, fetchUser, clearStoredUser } from "@/lib/cloud";
-import { redeemCode } from "@/lib/activation";
+import { redeemActivationCodeFn } from "@/lib/admin.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/activate")({
