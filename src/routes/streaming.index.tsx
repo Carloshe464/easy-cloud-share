@@ -5,6 +5,7 @@ import { Play, Plus, Check, Info, ChevronLeft, ChevronRight, Sparkles } from "lu
 import { getStoredUserId } from "@/lib/cloud";
 import { fetchCatalog, posterFor, useFavorites, useHistory, useProgress, type Title } from "@/lib/streaming";
 import type { FolderRow } from "@/components/cloud/types";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/streaming/")({
@@ -25,15 +26,26 @@ function StreamingHome() {
 
   useEffect(() => {
     if (!userId) return;
-    (async () => {
-      setLoading(true);
+    let alive = true;
+    const load = async (showSpinner = false) => {
+      if (showSpinner) setLoading(true);
       try {
         const { folders, titles } = await fetchCatalog(userId);
+        if (!alive) return;
         setTitles(titles); setFolders(folders);
-      } catch { toast.error("Falha ao carregar catálogo"); }
-      finally { setLoading(false); }
-    })();
+      } catch { if (alive) toast.error("Falha ao carregar catálogo"); }
+      finally { if (alive && showSpinner) setLoading(false); }
+    };
+    load(true);
+    // Realtime: refetch on any change to the public files catalog
+    const channel = supabase
+      .channel("streaming-catalog")
+      .on("postgres_changes", { event: "*", schema: "public", table: "files" }, () => { load(false); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "folders" }, () => { load(false); })
+      .subscribe();
+    return () => { alive = false; supabase.removeChannel(channel); };
   }, [userId]);
+
 
   const filtered = useMemo(() => {
     if (!q) return titles;
