@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { KeyRound, Loader2, ArrowRight, Check, LogOut } from "lucide-react";
 import { getStoredUserId, fetchUser, clearStoredUser } from "@/lib/cloud";
-import { redeemCode } from "@/lib/activation";
+import { redeemActivationCodeFn } from "@/lib/admin.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/activate")({
@@ -36,7 +36,8 @@ function ActivatePage() {
     if (!id) { navigate({ to: "/" }); return; }
     setBusy(true);
     try {
-      const ok = await redeemCode(code, id);
+      const res = await redeemActivationCodeFn({ data: { code, userId: id } });
+      const ok = res.ok;
       if (!ok) {
         setError("Código inválido ou já utilizado");
         return;

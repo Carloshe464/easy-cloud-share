@@ -1,8 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
 import { Shield, Loader2, KeyRound, Plus, Users, HardDrive, LogOut, Copy } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { adminLogin, isAdminAuthed, setAdminAuthed, createActivationCode } from "@/lib/activation";
+import { isAdminAuthed, getAdminToken, setAdminToken } from "@/lib/activation";
+import {
+  adminLoginFn,
+  adminCreateActivationCodeFn,
+  adminDashboardFn,
+} from "@/lib/admin.functions";
 import { formatBytes } from "@/lib/cloud";
 import { toast } from "sonner";
 
@@ -17,7 +21,7 @@ function AdminPage() {
   const [authed, setAuthed] = useState(false);
   useEffect(() => { setAuthed(isAdminAuthed()); }, []);
   if (!authed) return <AdminLogin onOk={() => setAuthed(true)} />;
-  return <AdminDashboard onLogout={() => { setAdminAuthed(false); setAuthed(false); }} />;
+  return <AdminDashboard onLogout={() => { setAdminToken(null); setAuthed(false); }} />;
 }
 
 function AdminLogin({ onOk }: { onOk: () => void }) {
@@ -27,14 +31,23 @@ function AdminLogin({ onOk }: { onOk: () => void }) {
   const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErr("");
     setBusy(true);
-    setTimeout(() => {
-      if (adminLogin(phone, pin)) onOk();
-      else setErr("Credenciais inválidas");
+    try {
+      const res = await adminLoginFn({ data: { phone, pin } });
+      if (res.ok) {
+        setAdminToken(res.token);
+        onOk();
+      } else {
+        setErr(res.reason === "not_configured" ? "Admin não configurado" : "Credenciais inválidas");
+      }
+    } catch {
+      setErr("Falha ao autenticar");
+    } finally {
       setBusy(false);
-    }, 400);
+    }
   };
 
   return (
@@ -81,26 +94,34 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    const [{ data: c }, filesAgg, usersCount] = await Promise.all([
-      supabase.from("activation_codes").select("*").order("created_at", { ascending: false }).limit(200),
-      supabase.from("files").select("size_bytes"),
-      supabase.from("users").select("id", { count: "exact", head: true }).not("activated_at", "is", null),
-    ]);
-    setCodes((c as CodeRow[]) ?? []);
-    const total = (filesAgg.data ?? []).reduce((s: number, r: { size_bytes: number }) => s + Number(r.size_bytes ?? 0), 0);
-    setUsedBytes(total);
-    setActiveUsers(usersCount.count ?? 0);
-    setLoading(false);
-  }, []);
+    const token = getAdminToken();
+    if (!token) { onLogout(); return; }
+    try {
+      const res = await adminDashboardFn({ data: { token } });
+      if (!res.ok) { onLogout(); return; }
+      setCodes(res.codes as CodeRow[]);
+      setUsedBytes(res.usedBytes);
+      setActiveUsers(res.activeUsers);
+    } finally {
+      setLoading(false);
+    }
+  }, [onLogout]);
 
   useEffect(() => { refresh(); }, [refresh]);
 
   const generate = async () => {
+    const token = getAdminToken();
+    if (!token) { onLogout(); return; }
     setGenerating(true);
     try {
-      const code = await createActivationCode();
-      toast.success(`Código gerado: ${code}`);
-      try { await navigator.clipboard.writeText(code); } catch { /* ignore */ }
+      const res = await adminCreateActivationCodeFn({ data: { token } });
+      if (!res.ok) {
+        toast.error(res.reason === "unauthorized" ? "Sessão expirada" : "Falha ao gerar código");
+        if (res.reason === "unauthorized") onLogout();
+        return;
+      }
+      toast.success(`Código gerado: ${res.code}`);
+      try { await navigator.clipboard.writeText(res.code); } catch { /* ignore */ }
       refresh();
     } catch (e) {
       toast.error((e as Error).message);
