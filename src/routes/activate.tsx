@@ -36,7 +36,8 @@ function ActivatePage() {
     if (!id) { navigate({ to: "/" }); return; }
     setBusy(true);
     try {
-      const ok = await redeemCode(code, id);
+      const res = await redeemActivationCodeFn({ data: { code, userId: id } });
+      const ok = res.ok;
       if (!ok) {
         setError("Código inválido ou já utilizado");
         return;
