@@ -38,16 +38,22 @@ function WatchPage() {
     (async () => {
       setLoading(true);
       const { data } = await supabase.from("files").select("*").eq("id", id).maybeSingle();
-      if (!data || !data.external_url) { toast.error("Conteúdo não encontrado"); navigate({ to: "/streaming" }); return; }
+      if (!data) { toast.error("Conteúdo não encontrado"); navigate({ to: "/streaming" }); return; }
       const t = data as Title;
       // Access control: must be public or owned by current user
       if (!t.is_public && t.user_id !== userId) {
         toast.error("Este conteúdo é privado"); navigate({ to: "/streaming" }); return;
       }
-      setTitle(t);
+      // Resolve a playable URL: external_url or public URL of storage upload
+      let playUrl = t.external_url ?? null;
+      if (!playUrl && t.storage_path) {
+        const { data: pub } = supabase.storage.from("cloud-files").getPublicUrl(t.storage_path);
+        playUrl = pub?.publicUrl ?? null;
+      }
+      if (!playUrl) { toast.error("Conteúdo sem fonte de vídeo"); navigate({ to: "/streaming" }); return; }
+      setTitle({ ...t, external_url: playUrl });
       hist.push(t.id);
       const { titles } = await fetchCatalog(userId);
-      // Episodes = same owner + same folder (mirrors Minha Nuvem structure)
       const eps = titles.filter((x) => x.user_id === t.user_id && x.folder_id === t.folder_id);
       setEpisodes(eps);
       setRelated(titles.filter((x) => x.id !== t.id && x.folder_id !== t.folder_id).slice(0, 18));
