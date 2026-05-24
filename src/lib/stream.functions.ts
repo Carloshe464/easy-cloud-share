@@ -21,6 +21,14 @@ function isAllowedUrl(raw: string): boolean {
   }
 }
 
+function isTeraboxUrl(raw: string): boolean {
+  try {
+    return /(^|\.)(terabox\.com|terabox\.app|1024terabox\.com|teraboxapp\.com|4funbox\.com|mirrobox\.com|nephobox\.com|freeterabox\.com|videynow\.com|momerybox\.com)$/i.test(new URL(raw).hostname);
+  } catch {
+    return false;
+  }
+}
+
 const Input = z.object({
   url: z.string().url().max(2048),
 });
@@ -34,10 +42,24 @@ export const resolveStreamFn = createServerFn({ method: "POST" })
     const r = await resolveStream(data.url);
     if (!r) return { ok: false as const, reason: "unresolved" as const };
 
-    // Ytdlp resolver (Terabox/Hefesto): retorna direto sem proxy.
-    // O CDN do Terabox aceita requisições diretas do browser sem Referer
-    // quando a URL já está assinada com token temporário.
+    // Hefesto/Terabox: always proxy Terabox media so required headers stay server-side
+    // and the browser never falls back to the blocked public page iframe.
     if (r.resolver === "ytdlp") {
+      if (isTeraboxUrl(data.url)) {
+        const token = await signStreamToken({
+          u: r.streamUrl,
+          h: r.headers,
+          e: Date.now() + PLAY_TTL_MS,
+        });
+        return {
+          ok: true as const,
+          kind: r.kind,
+          streamUrl: `/api/public/stream/play?t=${encodeURIComponent(token)}`,
+          proxied: true as const,
+          expiresAt: Date.now() + PLAY_TTL_MS,
+          resolver: r.resolver,
+        };
+      }
       return {
         ok: true as const,
         kind: r.kind,
