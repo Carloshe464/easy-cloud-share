@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
 import {
   ArrowLeft, Check, Heart, Maximize, Pause, Play, SkipForward,
-  Volume2, VolumeX, Loader2, Gauge, Subtitles, Settings, ExternalLink,
+  Volume2, VolumeX, Loader2, Gauge, Subtitles, Settings, ExternalLink, AlertTriangle,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { detectExternalKind } from "@/components/cloud/types";
@@ -204,6 +204,7 @@ function EpisodeList({ items, currentId, progressMap }:
 // Hosts we know how to embed natively via iframe (no Hefesto needed)
 const EMBED_HOSTS = /youtube|youtu\.be|vimeo|drive\.google|docs\.google|mega\.nz|mega\.co\.nz|dailymotion|dai\.ly|twitch|tiktok|facebook|fb\.watch|instagram|twitter|x\.com|streamable|odysee|rumble|kick\.com|soundcloud|spotify/i;
 const GOOGLE_DRIVE_HOSTS = /drive\.google|docs\.google/i;
+const TERABOX_HOSTS = /(^|\.)(terabox\.com|terabox\.app|1024terabox\.com|teraboxapp\.com|4funbox\.com|mirrobox\.com|nephobox\.com|freeterabox\.com|videynow\.com|momerybox\.com)$/i;
 
 function PlayerSurface({ url, name, initial, onProgress, onEnded }: {
   url: string; name: string; initial: number;
@@ -221,6 +222,7 @@ function PlayerSurface({ url, name, initial, onProgress, onEnded }: {
   let host = "";
   try { host = new URL(url).hostname; } catch { /* ignore */ }
   const knownEmbed = EMBED_HOSTS.test(host);
+  const isTerabox = TERABOX_HOSTS.test(host);
 
   // Drive público → espelha o player de preview do Drive dentro do app.
   if (GOOGLE_DRIVE_HOSTS.test(host)) {
@@ -232,8 +234,8 @@ function PlayerSurface({ url, name, initial, onProgress, onEnded }: {
     return <IframePlayer src={ext?.src ?? url} name={name} originalUrl={url} />;
   }
 
-  // Caso desconhecido: tenta resolver via Hefesto; se falhar, cai pra iframe.
-  return <ResolvedPlayer url={url} name={name} initial={initial} onProgress={onProgress} onEnded={onEnded} fallbackSrc={ext?.src ?? url} />;
+  // Caso desconhecido: tenta resolver via Hefesto; Terabox nunca cai para iframe porque a página pública bloqueia embed.
+  return <ResolvedPlayer url={url} name={name} initial={initial} onProgress={onProgress} onEnded={onEnded} fallbackSrc={ext?.src ?? url} blockIframeFallback={isTerabox} />;
 }
 
 function IframePlayer({ src, name, originalUrl, referrerPolicy }: {
@@ -260,10 +262,10 @@ function IframePlayer({ src, name, originalUrl, referrerPolicy }: {
   );
 }
 
-function ResolvedPlayer({ url, name, initial, onProgress, onEnded, fallbackSrc }: {
+function ResolvedPlayer({ url, name, initial, onProgress, onEnded, fallbackSrc, blockIframeFallback = false }: {
   url: string; name: string; initial: number;
   onProgress: (t: number, d: number) => void;
-  onEnded: () => void; fallbackSrc: string;
+  onEnded: () => void; fallbackSrc: string; blockIframeFallback?: boolean;
 }) {
   const [state, setState] = useState<
     | { status: "loading" }
@@ -297,7 +299,23 @@ function ResolvedPlayer({ url, name, initial, onProgress, onEnded, fallbackSrc }
   if (state.status === "resolved") {
     return <NativePlayer url={state.streamUrl} initial={initial} onProgress={onProgress} onEnded={onEnded} hls={state.kind === "hls"} />;
   }
+  if (blockIframeFallback) return <BlockedEmbedFallback url={url} />;
   return <IframePlayer src={fallbackSrc} name={name} originalUrl={url} />;
+}
+
+function BlockedEmbedFallback({ url }: { url: string }) {
+  return (
+    <div className="relative aspect-video rounded-xl overflow-hidden ring-1 ring-border bg-black flex items-center justify-center px-6 text-center shadow-[0_24px_60px_-20px_rgba(0,0,0,0.85)]">
+      <div className="max-w-md">
+        <AlertTriangle className="w-10 h-10 mx-auto mb-4 text-primary" strokeWidth={1.5} />
+        <h2 className="font-display text-2xl mb-2">Este link do Terabox não liberou reprodução interna</h2>
+        <p className="text-sm text-muted-foreground mb-5">A fonte pública bloqueia incorporação no navegador. Se o Hefesto não retornar uma mídia direta, abra no site original.</p>
+        <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-4 py-2 text-sm font-semibold hover:opacity-90 transition">
+          <ExternalLink className="w-4 h-4" /> Abrir no site original
+        </a>
+      </div>
+    </div>
+  );
 }
 
 

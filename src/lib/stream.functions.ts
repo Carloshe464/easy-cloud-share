@@ -5,7 +5,7 @@ import { signStreamToken, PLAY_TTL_MS } from "./stream-sign.server";
 
 // Allowlist of hostnames the resolver is allowed to fetch.
 // Prevents SSRF (probing internal IPs, cloud metadata, etc.) and bandwidth abuse.
-const ALLOWED_HOST_RE = /(^|\.)(youtube\.com|youtu\.be|youtube-nocookie\.com|vimeo\.com|player\.vimeo\.com|drive\.google\.com|docs\.google\.com|mega\.nz|mega\.co\.nz|dailymotion\.com|dai\.ly|twitch\.tv|tiktok\.com|facebook\.com|fb\.watch|instagram\.com|twitter\.com|x\.com|streamable\.com|odysee\.com|rumble\.com|kick\.com|soundcloud\.com|spotify\.com|terabox\.com|1024terabox\.com|teraboxapp\.com|4funbox\.com|mirrobox\.com|nephobox\.com|googleusercontent\.com|googlevideo\.com|akamaihd\.net|cloudfront\.net)$/i;
+const ALLOWED_HOST_RE = /(^|\.)(youtube\.com|youtu\.be|youtube-nocookie\.com|vimeo\.com|player\.vimeo\.com|drive\.google\.com|docs\.google\.com|mega\.nz|mega\.co\.nz|dailymotion\.com|dai\.ly|twitch\.tv|tiktok\.com|facebook\.com|fb\.watch|instagram\.com|twitter\.com|x\.com|streamable\.com|odysee\.com|rumble\.com|kick\.com|soundcloud\.com|spotify\.com|terabox\.com|terabox\.app|1024terabox\.com|teraboxapp\.com|4funbox\.com|mirrobox\.com|nephobox\.com|freeterabox\.com|videynow\.com|momerybox\.com|googleusercontent\.com|googlevideo\.com|akamaihd\.net|cloudfront\.net)$/i;
 
 const PRIVATE_NET_RE = /^(10\.|127\.|0\.|169\.254\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|::1$|fc00:|fd00:|fe80:|localhost$)/i;
 
@@ -16,6 +16,14 @@ function isAllowedUrl(raw: string): boolean {
     const host = u.hostname.toLowerCase();
     if (PRIVATE_NET_RE.test(host)) return false;
     return ALLOWED_HOST_RE.test(host);
+  } catch {
+    return false;
+  }
+}
+
+function isTeraboxUrl(raw: string): boolean {
+  try {
+    return /(^|\.)(terabox\.com|terabox\.app|1024terabox\.com|teraboxapp\.com|4funbox\.com|mirrobox\.com|nephobox\.com|freeterabox\.com|videynow\.com|momerybox\.com)$/i.test(new URL(raw).hostname);
   } catch {
     return false;
   }
@@ -34,10 +42,24 @@ export const resolveStreamFn = createServerFn({ method: "POST" })
     const r = await resolveStream(data.url);
     if (!r) return { ok: false as const, reason: "unresolved" as const };
 
-    // Ytdlp resolver (Terabox/Hefesto): retorna direto sem proxy.
-    // O CDN do Terabox aceita requisições diretas do browser sem Referer
-    // quando a URL já está assinada com token temporário.
+    // Hefesto/Terabox: always proxy Terabox media so required headers stay server-side
+    // and the browser never falls back to the blocked public page iframe.
     if (r.resolver === "ytdlp") {
+      if (isTeraboxUrl(data.url)) {
+        const token = await signStreamToken({
+          u: r.streamUrl,
+          h: r.headers,
+          e: Date.now() + PLAY_TTL_MS,
+        });
+        return {
+          ok: true as const,
+          kind: r.kind,
+          streamUrl: `/api/public/stream/play?t=${encodeURIComponent(token)}`,
+          proxied: true as const,
+          expiresAt: Date.now() + PLAY_TTL_MS,
+          resolver: r.resolver,
+        };
+      }
       return {
         ok: true as const,
         kind: r.kind,
