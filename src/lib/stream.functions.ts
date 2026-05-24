@@ -5,7 +5,7 @@ import { signStreamToken, PLAY_TTL_MS } from "./stream-sign.server";
 
 // Allowlist of hostnames the resolver is allowed to fetch.
 // Prevents SSRF (probing internal IPs, cloud metadata, etc.) and bandwidth abuse.
-const ALLOWED_HOST_RE = /(^|\.)(youtube\.com|youtu\.be|youtube-nocookie\.com|vimeo\.com|player\.vimeo\.com|drive\.google\.com|docs\.google\.com|mega\.nz|mega\.co\.nz|dailymotion\.com|dai\.ly|twitch\.tv|tiktok\.com|facebook\.com|fb\.watch|instagram\.com|twitter\.com|x\.com|streamable\.com|odysee\.com|rumble\.com|kick\.com|soundcloud\.com|spotify\.com|terabox\.com|1024terabox\.com|teraboxapp\.com|4funbox\.com|mirrobox\.com|nephobox\.com|googleusercontent\.com|googlevideo\.com|akamaihd\.net|cloudfront\.net)$/i;
+const ALLOWED_HOST_RE = /(^|\.)(youtube\.com|youtu\.be|youtube-nocookie\.com|vimeo\.com|player\.vimeo\.com|drive\.google\.com|docs\.google\.com|mega\.nz|mega\.co\.nz|dailymotion\.com|dai\.ly|twitch\.tv|tiktok\.com|facebook\.com|fb\.watch|instagram\.com|twitter\.com|x\.com|streamable\.com|odysee\.com|rumble\.com|kick\.com|soundcloud\.com|spotify\.com|terabox\.com|terabox\.app|1024terabox\.com|teraboxapp\.com|4funbox\.com|mirrobox\.com|nephobox\.com|freeterabox\.com|videynow\.com|momerybox\.com|googleusercontent\.com|googlevideo\.com|akamaihd\.net|cloudfront\.net)$/i;
 
 const PRIVATE_NET_RE = /^(10\.|127\.|0\.|169\.254\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|::1$|fc00:|fd00:|fe80:|localhost$)/i;
 
